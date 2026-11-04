@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">UniCalendar</string>
+    <string name="action_previous_month">Previous month</string>
+    <string name="action_next_month">Next month</string>
+    <string name="action_today">Today</string>
+    <string name="action_add_event">Add event</string>
+    <string name="action_sync">Sync schedule</string>
+    <string name="title_events">Events</string>
+    <string name="no_events">No events scheduled for this day</string>
+    <string name="dialog_add_title">New Event</string>
+    <string name="dialog_sync_title">Sync University Schedule</string>
+    <string name="field_title">Title</string>
+    <string name="field_location">Location / Classroom</string>
+    <string name="field_description">Description</string>
+    <string name="field_type">Event Type</string>
+    <string name="field_url">Schedule URL (.ics or web timetable)</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_sync">Fetch &amp; Sync</string>
+    <string name="btn_delete">Delete</string>
+    <string name="sync_in_progress">Synchronizing schedule...</string>
+    <string name="sync_success">Schedule synchronized successfully</string>
+    <string name="sync_failed">Synchronization failed</string>
+</resources>
