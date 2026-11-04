@@ -22,12 +22,54 @@ permissions:
 
 jobs:
   build:
-    name: Build & Test
+    name: Build & Release
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version Tag
+        id: versioning
+        run: |
+          git fetch --tags --force
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG_NAME="${{ github.ref_name }}"
+            SHOULD_RELEASE="true"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" && "${{ github.event_name }}" == "push" ]]; then
+            EXISTING_TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+' | head -n 1 || true)
+            if [[ -n "$EXISTING_TAG" ]]; then
+              TAG_NAME="$EXISTING_TAG"
+            else
+              LATEST_TAG=$(git tag -l "v*" --sort=-v:refname | head -n 1)
+              if [[ -z "$LATEST_TAG" ]]; then
+                TAG_NAME="v1.0.0"
+              else
+                RAW_VER="${LATEST_TAG#v}"
+                IFS='.' read -r MAJOR MINOR PATCH <<< "$RAW_VER"
+                PATCH=$((PATCH + 1))
+                TAG_NAME="v${MAJOR}.${MINOR}.${PATCH}"
+              fi
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git tag -a "$TAG_NAME" -m "Automated release $TAG_NAME on merge to main"
+              git push origin "$TAG_NAME"
+            fi
+            SHOULD_RELEASE="true"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.create_release }}" == "true" ]]; then
+            TAG_NAME=$(git tag -l "v*" --sort=-v:refname | head -n 1)
+            if [[ -z "$TAG_NAME" ]]; then
+              TAG_NAME="v1.0.0"
+            fi
+            SHOULD_RELEASE="true"
+          else
+            TAG_NAME="dev-build"
+            SHOULD_RELEASE="false"
+          fi
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "should_release=${SHOULD_RELEASE}" >> $GITHUB_OUTPUT
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -68,10 +110,12 @@ jobs:
           path: output_apks/
           retention-days: 14
 
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release == true)
+      - name: Publish GitHub Release
+        if: steps.versioning.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.versioning.outputs.tag_name }}
+          name: ${{ steps.versioning.outputs.tag_name }}
           files: output_apks/*
           generate_release_notes: true
           draft: false
