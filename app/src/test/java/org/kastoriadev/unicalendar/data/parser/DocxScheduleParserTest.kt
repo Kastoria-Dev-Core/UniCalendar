@@ -8,6 +8,7 @@ import org.kastoriadev.unicalendar.domain.model.EventType
 import java.io.File
 import java.io.FileInputStream
 import java.time.DayOfWeek
+import java.time.LocalDate
 
 class DocxScheduleParserTest {
 
@@ -98,6 +99,12 @@ class DocxScheduleParserTest {
         assertTrue("Must contain Semester 7", semesters.contains("7"))
         assertTrue("Must contain Semester PDE", semesters.contains("PDE"))
 
+        // Verify that academic calendar dates cover October 2026 through January 2027
+        val minDate = events.minOf { it.startTime.toLocalDate() }
+        val maxDate = events.maxOf { it.endTime.toLocalDate() }
+        assertEquals(LocalDate.of(2026, 10, 5), minDate)
+        assertTrue(maxDate >= LocalDate.of(2027, 1, 15))
+
         // Verify Semester 1 lessons
         val sem1Events = events.filter { it.semester == "1" }
         val titles1 = sem1Events.map { it.title }.distinct()
@@ -146,5 +153,12 @@ class DocxScheduleParserTest {
         assertEquals(16, pdeThu.endTime.hour)
         assertTrue(pdeThu.description.contains("Πέλλας"))
         assertEquals("Β1", pdeThu.location)
+
+        // Verify Thursday, November 5, 2026 (Week 5) has accurate Sem 1 classes
+        val nov5Sem1 = sem1Events.filter { it.startTime.toLocalDate() == LocalDate.of(2026, 11, 5) }
+        assertTrue("Nov 5 Sem 1 has classes", nov5Sem1.isNotEmpty())
+        val nov5Titles = nov5Sem1.map { it.title }
+        assertTrue(nov5Titles.any { it.contains("Εισαγωγή στους Υπολογιστές") })
+        assertTrue(nov5Titles.any { it.contains("Μαθηματική Ανάλυση Ι") })
     }
 }

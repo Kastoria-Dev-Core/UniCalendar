@@ -56,6 +56,7 @@ class DocxScheduleParser : ScheduleParser {
         val bodyNodes = doc.getElementsByTagNameNS("*", "body")
         val body = (if (bodyNodes.length > 0) bodyNodes.item(0) as? Element else doc.documentElement) ?: return emptyList()
 
+        val semesterStartDate = detectSemesterStartDate(xmlContent)
         var currentSemester = "1"
         var currentDay: DayOfWeek? = null
 
@@ -88,7 +89,8 @@ class DocxScheduleParser : ScheduleParser {
                             rows = rows,
                             dayColumnMap = dayColumnMap,
                             activeSemester = currentSemester,
-                            sourceUrl = sourceUrl
+                            sourceUrl = sourceUrl,
+                            baseDate = semesterStartDate
                         )
                         events.addAll(gridEvents)
                     } else {
@@ -102,7 +104,8 @@ class DocxScheduleParser : ScheduleParser {
                                     cells = cellTexts,
                                     activeSemester = currentSemester,
                                     previousDay = currentDay,
-                                    sourceUrl = sourceUrl
+                                    sourceUrl = sourceUrl,
+                                    baseDate = semesterStartDate
                                 )
                                 if (rowEvents.isNotEmpty()) {
                                     events.addAll(rowEvents)
@@ -122,6 +125,36 @@ class DocxScheduleParser : ScheduleParser {
         }
 
         return events
+    }
+
+    private fun detectSemesterStartDate(xmlContent: String): LocalDate {
+        val yearPattern = Pattern.compile("\\b(20\\d\\d)\\s*[-/–]\\s*(20\\d\\d)\\b")
+        val yearMatcher = yearPattern.matcher(xmlContent)
+        var startYear: Int? = null
+        var endYear: Int? = null
+        if (yearMatcher.find()) {
+            startYear = yearMatcher.group(1)?.toIntOrNull()
+            endYear = yearMatcher.group(2)?.toIntOrNull()
+        }
+
+        val headerText = normalizeGreek(xmlContent.take(6000))
+        val isWinter = headerText.contains("ΧΕΙΜΕΡ") || headerText.contains("ΧΕ")
+        val isSpring = headerText.contains("ΕΑΡΙΝ") || headerText.contains("EE")
+
+        return when {
+            startYear != null && isWinter -> {
+                // Official Greek university winter semester starts on the first Monday of October
+                LocalDate.of(startYear, 10, 1).with(TemporalAdjusters.firstInMonth(DayOfWeek.MONDAY))
+            }
+            endYear != null && isSpring -> {
+                // Official Greek university spring semester starts mid-February
+                LocalDate.of(endYear, 2, 1).with(TemporalAdjusters.firstInMonth(DayOfWeek.MONDAY)).plusWeeks(1)
+            }
+            else -> {
+                // Default fallback: anchor around current semester
+                LocalDate.now().minusWeeks(6).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            }
+        }
     }
 
     private fun detectGridDayColumns(headerRow: Element): Map<Int, DayOfWeek> {
@@ -148,7 +181,8 @@ class DocxScheduleParser : ScheduleParser {
         rows: List<Element>,
         dayColumnMap: Map<Int, DayOfWeek>,
         activeSemester: String,
-        sourceUrl: String?
+        sourceUrl: String?,
+        baseDate: LocalDate
     ): List<CalendarEvent> {
         val events = mutableListOf<CalendarEvent>()
         if (rows.size <= 1) return events
@@ -189,7 +223,8 @@ class DocxScheduleParser : ScheduleParser {
                     endTime = endTime,
                     type = eventType,
                     sourceUrl = sourceUrl,
-                    weeks = 18
+                    baseDate = baseDate,
+                    weeks = 16
                 )
             )
         }
@@ -394,7 +429,8 @@ class DocxScheduleParser : ScheduleParser {
         cells: List<String>,
         activeSemester: String,
         previousDay: DayOfWeek?,
-        sourceUrl: String?
+        sourceUrl: String?,
+        baseDate: LocalDate
     ): List<CalendarEvent> {
         val rowText = cells.joinToString(" ").trim()
         if (rowText.isBlank()) return emptyList()
@@ -418,7 +454,8 @@ class DocxScheduleParser : ScheduleParser {
             endTime = endTime,
             type = eventType,
             sourceUrl = sourceUrl,
-            weeks = 18
+            baseDate = baseDate,
+            weeks = 16
         )
     }
 
@@ -569,11 +606,10 @@ class DocxScheduleParser : ScheduleParser {
         endTime: LocalTime,
         type: EventType,
         sourceUrl: String?,
+        baseDate: LocalDate,
         weeks: Int
     ): List<CalendarEvent> {
         val events = mutableListOf<CalendarEvent>()
-        // Start from 6 weeks prior to current week to cover past semester weeks up to current week
-        val baseDate = LocalDate.now().minusWeeks(6).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         var nextDate = baseDate.with(TemporalAdjusters.nextOrSame(dayOfWeek))
 
         for (i in 0 until weeks) {
