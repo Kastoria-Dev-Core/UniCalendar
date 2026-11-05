@@ -10,7 +10,8 @@ import java.time.LocalDateTime
     tableName = "events",
     indices = [
         Index(value = ["startTime"]),
-        Index(value = ["isSynced"])
+        Index(value = ["isSynced"]),
+        Index(value = ["semester"])
     ]
 )
 data class EventEntity(
@@ -20,6 +21,7 @@ data class EventEntity(
     val description: String,
     val location: String,
     val notes: String = "",
+    val semester: String = "",
     val startTime: LocalDateTime,
     val endTime: LocalDateTime,
     val type: EventType,

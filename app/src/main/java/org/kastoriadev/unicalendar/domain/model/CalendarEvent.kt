@@ -8,6 +8,7 @@ data class CalendarEvent(
     val description: String = "",
     val location: String = "",
     val notes: String = "",
+    val semester: String = "",
     val startTime: LocalDateTime,
     val endTime: LocalDateTime,
     val type: EventType = EventType.GENERAL,

@@ -14,6 +14,9 @@ interface EventDao {
     @Query("SELECT * FROM events ORDER BY startTime ASC")
     fun getAllEvents(): Flow<List<EventEntity>>
 
+    @Query("SELECT * FROM events WHERE (:semester IS NULL OR semester = :semester) ORDER BY startTime ASC")
+    fun getEventsBySemester(semester: String?): Flow<List<EventEntity>>
+
     @Query("SELECT * FROM events WHERE startTime >= :start AND startTime < :end ORDER BY startTime ASC")
     fun getEventsBetween(start: LocalDateTime, end: LocalDateTime): Flow<List<EventEntity>>
 
@@ -40,4 +43,7 @@ interface EventDao {
 
     @Query("DELETE FROM events WHERE isSynced = 1")
     suspend fun clearSyncedEvents()
+
+    @Query("DELETE FROM events WHERE isSynced = 1 AND (:semester IS NULL OR semester = :semester)")
+    suspend fun clearSyncedEventsBySemester(semester: String?)
 }
