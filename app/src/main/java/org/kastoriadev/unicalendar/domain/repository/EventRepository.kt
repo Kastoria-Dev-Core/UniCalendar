@@ -12,6 +12,7 @@ interface EventRepository {
     suspend fun insertEvent(event: CalendarEvent): Long
     suspend fun insertEvents(events: List<CalendarEvent>): List<Long>
     suspend fun updateEvent(event: CalendarEvent)
+    suspend fun updateNotes(id: Long, notes: String)
     suspend fun deleteEvent(event: CalendarEvent)
     suspend fun deleteEventById(id: Long)
     suspend fun clearSyncedEvents()
