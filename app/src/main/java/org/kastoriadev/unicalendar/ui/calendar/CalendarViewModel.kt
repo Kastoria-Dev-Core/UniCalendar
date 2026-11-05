@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.kastoriadev.unicalendar.data.preferences.UserPreferences
 import org.kastoriadev.unicalendar.data.sync.ScheduleSyncManager
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.EventType
@@ -23,11 +24,22 @@ import java.time.temporal.TemporalAdjusters
 
 class CalendarViewModel(
     private val repository: EventRepository,
-    private val syncManager: ScheduleSyncManager
+    private val syncManager: ScheduleSyncManager,
+    private val userPreferences: UserPreferences? = null,
+    private val defaultTimetableStreamProvider: (() -> InputStream?)? = null
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CalendarUiState())
+    private val _uiState = MutableStateFlow(
+        CalendarUiState(
+            selectedSemester = userPreferences?.selectedSemester,
+            includePde = userPreferences?.includePde ?: false,
+            showSemesterPrompt = userPreferences?.let { !it.hasCompletedOnboarding } ?: false,
+            canDismissSemesterPrompt = userPreferences?.hasCompletedOnboarding ?: true
+        )
+    )
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
+
+    private var hasAttemptedInitialSeed = false
 
     init {
         observeEvents()
@@ -38,8 +50,14 @@ class CalendarViewModel(
             repository.getAllEvents()
                 .catch { emit(emptyList()) }
                 .collect { events ->
+                    if (events.isEmpty() && !hasAttemptedInitialSeed && defaultTimetableStreamProvider != null) {
+                        hasAttemptedInitialSeed = true
+                        seedDefaultTimetable()
+                        return@collect
+                    }
+
                     _uiState.update { current ->
-                        val filtered = filterEventsBySemester(events, current.selectedSemesterFilter)
+                        val filtered = filterEvents(events, current.selectedSemester, current.includePde)
                         val grouped = filtered.groupBy { it.startTime.toLocalDate() }
                         current.copy(
                             allEvents = events,
@@ -51,28 +69,88 @@ class CalendarViewModel(
         }
     }
 
+    private fun seedDefaultTimetable() {
+        viewModelScope.launch {
+            try {
+                val stream = defaultTimetableStreamProvider?.invoke()
+                if (stream != null) {
+                    syncManager.syncFromStream(stream, "default_timetable.docx")
+                }
+            } catch (e: Exception) {
+                // Silently fallback if seed fails
+            }
+        }
+    }
+
     fun setViewMode(mode: CalendarViewMode) {
         _uiState.update { it.copy(viewMode = mode) }
     }
 
     fun setSemesterFilter(semester: String?) {
         val target = if (semester.equals("ALL", ignoreCase = true)) null else semester
+        userPreferences?.selectedSemester = target
         _uiState.update { current ->
-            val filtered = filterEventsBySemester(current.allEvents, target)
+            val filtered = filterEvents(current.allEvents, target, current.includePde)
             val grouped = filtered.groupBy { it.startTime.toLocalDate() }
             current.copy(
-                selectedSemesterFilter = target,
+                selectedSemester = target,
                 monthEvents = grouped,
                 selectedDateEvents = grouped[current.selectedDate] ?: emptyList()
             )
         }
     }
 
-    private fun filterEventsBySemester(events: List<CalendarEvent>, semester: String?): List<CalendarEvent> {
+    fun onSemesterConfirmed(semester: String, includePde: Boolean) {
+        val targetSemester = if (semester.equals("ALL", ignoreCase = true)) null else semester
+        userPreferences?.let { prefs ->
+            prefs.selectedSemester = targetSemester
+            prefs.includePde = includePde
+            prefs.hasCompletedOnboarding = true
+        }
+
+        _uiState.update { current ->
+            val filtered = filterEvents(current.allEvents, targetSemester, includePde)
+            val grouped = filtered.groupBy { it.startTime.toLocalDate() }
+            current.copy(
+                selectedSemester = targetSemester,
+                includePde = includePde,
+                showSemesterPrompt = false,
+                canDismissSemesterPrompt = true,
+                monthEvents = grouped,
+                selectedDateEvents = grouped[current.selectedDate] ?: emptyList()
+            )
+        }
+    }
+
+    fun openSemesterPrompt() {
+        _uiState.update { it.copy(showSemesterPrompt = true, canDismissSemesterPrompt = true) }
+    }
+
+    fun dismissSemesterPrompt() {
+        _uiState.update { it.copy(showSemesterPrompt = false) }
+    }
+
+    private fun filterEvents(
+        events: List<CalendarEvent>,
+        semester: String?,
+        includePde: Boolean
+    ): List<CalendarEvent> {
         if (semester.isNullOrBlank() || semester.equals("ALL", ignoreCase = true)) {
             return events
         }
-        return events.filter { it.semester.equals(semester, ignoreCase = true) || it.semester.isBlank() }
+        return events.filter { event ->
+            val sem = event.semester.trim()
+            if (sem.equals(semester, ignoreCase = true)) {
+                true
+            } else if (includePde && sem.equals("PDE", ignoreCase = true)) {
+                true
+            } else if (sem.isBlank()) {
+                // User-created general event not tied to a uni course
+                true
+            } else {
+                false
+            }
+        }
     }
 
     fun onDateSelected(date: LocalDate) {
@@ -241,12 +319,19 @@ class CalendarViewModel(
 
     class Factory(
         private val repository: EventRepository,
-        private val syncManager: ScheduleSyncManager
+        private val syncManager: ScheduleSyncManager,
+        private val userPreferences: UserPreferences? = null,
+        private val defaultTimetableStreamProvider: (() -> InputStream?)? = null
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(CalendarViewModel::class.java)) {
-                return CalendarViewModel(repository, syncManager) as T
+                return CalendarViewModel(
+                    repository = repository,
+                    syncManager = syncManager,
+                    userPreferences = userPreferences,
+                    defaultTimetableStreamProvider = defaultTimetableStreamProvider
+                ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

@@ -1,0 +1,150 @@
+package org.kastoriadev.unicalendar.ui
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.kastoriadev.unicalendar.data.sync.ScheduleSyncManager
+import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+import org.kastoriadev.unicalendar.domain.repository.EventRepository
+import org.kastoriadev.unicalendar.ui.calendar.CalendarViewModel
+import java.time.LocalDate
+import java.time.LocalDateTime
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class CalendarViewModelTest {
+
+    private val testDispatcher = StandardTestDispatcher()
+
+    private class FakeEventRepository : EventRepository {
+        val eventsFlow = MutableStateFlow<List<CalendarEvent>>(emptyList())
+
+        override fun getAllEvents(): Flow<List<CalendarEvent>> = eventsFlow
+        override fun getEventsBySemester(semester: String?): Flow<List<CalendarEvent>> = eventsFlow
+        override fun getEventsForDate(date: LocalDate): Flow<List<CalendarEvent>> = eventsFlow
+        override fun getEventsForMonth(year: Int, month: Int): Flow<List<CalendarEvent>> = eventsFlow
+        override suspend fun getEventById(id: Long): CalendarEvent? = null
+        override suspend fun insertEvent(event: CalendarEvent): Long = 1L
+        override suspend fun insertEvents(events: List<CalendarEvent>): List<Long> = emptyList()
+        override suspend fun updateEvent(event: CalendarEvent) {}
+        override suspend fun updateNotes(id: Long, notes: String) {}
+        override suspend fun deleteEvent(event: CalendarEvent) {}
+        override suspend fun deleteEventById(id: Long) {}
+        override suspend fun clearSyncedEvents() {}
+        override suspend fun clearSyncedEventsBySemester(semester: String?) {}
+    }
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun semesterFiltering_isolatesEachSemesterCalendar() = runTest {
+        val repo = FakeEventRepository()
+        val syncManager = ScheduleSyncManager(repo)
+        val targetDate = LocalDate.of(2026, 11, 3)
+
+        val sampleEvents = listOf(
+            CalendarEvent(
+                id = 1,
+                title = "Ηλεκτρονική",
+                semester = "1",
+                startTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(9, 0)),
+                endTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(11, 0))
+            ),
+            CalendarEvent(
+                id = 2,
+                title = "Μεταγλωττιστές",
+                semester = "3",
+                startTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(11, 0)),
+                endTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(13, 0))
+            ),
+            CalendarEvent(
+                id = 3,
+                title = "Αλγόριθμοι Μηχανικής Μάθησης",
+                semester = "7",
+                startTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(9, 0)),
+                endTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(11, 0))
+            ),
+            CalendarEvent(
+                id = 4,
+                title = "Εισαγωγή στην Παιδαγωγική",
+                semester = "PDE",
+                startTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(17, 0)),
+                endTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(20, 0))
+            ),
+            CalendarEvent(
+                id = 5,
+                title = "Personal Assignment Study",
+                semester = "", // Personal event
+                startTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(14, 0)),
+                endTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(15, 0))
+            )
+        )
+
+        repo.eventsFlow.value = sampleEvents
+
+        val viewModel = CalendarViewModel(repo, syncManager)
+        viewModel.onDateSelected(targetDate)
+        advanceUntilIdle()
+
+        // 1. By default with no semester set (or ALL): all 5 events visible
+        assertEquals(5, viewModel.uiState.value.allEvents.size)
+
+        // 2. Select Semester 1 (without PDE)
+        viewModel.onSemesterConfirmed(semester = "1", includePde = false)
+        advanceUntilIdle()
+
+        val sem1DayEvents = viewModel.uiState.value.selectedDateEvents
+        val sem1Titles = sem1DayEvents.map { it.title }
+        assertTrue("Sem 1 has Ηλεκτρονική", sem1Titles.contains("Ηλεκτρονική"))
+        assertTrue("Sem 1 has personal study", sem1Titles.contains("Personal Assignment Study"))
+        assertFalse("Sem 1 does not have Μεταγλωττιστές", sem1Titles.contains("Μεταγλωττιστές"))
+        assertFalse("Sem 1 does not have ML", sem1Titles.contains("Αλγόριθμοι Μηχανικής Μάθησης"))
+        assertFalse("Sem 1 does not have PDE", sem1Titles.contains("Εισαγωγή στην Παιδαγωγική"))
+
+        // 3. Select Semester 1 WITH PDE included
+        viewModel.onSemesterConfirmed(semester = "1", includePde = true)
+        advanceUntilIdle()
+
+        val sem1WithPdeTitles = viewModel.uiState.value.selectedDateEvents.map { it.title }
+        assertTrue("Sem 1 has Ηλεκτρονική", sem1WithPdeTitles.contains("Ηλεκτρονική"))
+        assertTrue("Sem 1 + PDE has PDE course", sem1WithPdeTitles.contains("Εισαγωγή στην Παιδαγωγική"))
+        assertFalse("Sem 1 + PDE does not have Sem 3", sem1WithPdeTitles.contains("Μεταγλωττιστές"))
+
+        // 4. Switch calendar to Semester 3
+        viewModel.setSemesterFilter("3")
+        advanceUntilIdle()
+
+        val sem3Titles = viewModel.uiState.value.selectedDateEvents.map { it.title }
+        assertTrue("Sem 3 has Μεταγλωττιστές", sem3Titles.contains("Μεταγλωττιστές"))
+        assertFalse("Sem 3 does not have Ηλεκτρονική", sem3Titles.contains("Ηλεκτρονική"))
+        assertFalse("Sem 3 does not have ML", sem3Titles.contains("Αλγόριθμοι Μηχανικής Μάθησης"))
+
+        // 5. Switch to PDE only
+        viewModel.setSemesterFilter("PDE")
+        advanceUntilIdle()
+
+        val pdeOnlyTitles = viewModel.uiState.value.selectedDateEvents.map { it.title }
+        assertTrue("PDE calendar has PDE course", pdeOnlyTitles.contains("Εισαγωγή στην Παιδαγωγική"))
+        assertFalse("PDE calendar does not have Ηλεκτρονική", pdeOnlyTitles.contains("Ηλεκτρονική"))
+        assertFalse("PDE calendar does not have Μεταγλωττιστές", pdeOnlyTitles.contains("Μεταγλωττιστές"))
+    }
+}
