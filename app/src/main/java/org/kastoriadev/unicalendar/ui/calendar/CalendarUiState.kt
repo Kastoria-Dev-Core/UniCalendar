@@ -13,13 +13,13 @@ import java.time.temporal.TemporalAdjusters
 data class CalendarUiState(
     val viewMode: CalendarViewMode = CalendarViewMode.MONTH,
     val displayLayoutMode: DisplayLayoutMode = DisplayLayoutMode.SPLIT,
-    val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val appLanguage: AppLanguage = AppLanguage.SYSTEM,
+    val themeMode: ThemeMode = ThemeMode.LIGHT,
+    val appLanguage: AppLanguage = AppLanguage.GREEK,
     val selectedSemester: String? = null,
     val includePde: Boolean = false,
     val showSemesterPrompt: Boolean = false,
     val canDismissSemesterPrompt: Boolean = true,
-    val showSettingsDialog: Boolean = false,
+    val showSettingsScreen: Boolean = false,
     val showDayDetailsSheet: Boolean = false,
     val currentMonth: YearMonth = YearMonth.now(),
     val currentWeekStart: LocalDate = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
@@ -32,4 +32,6 @@ data class CalendarUiState(
     val showAddDialog: Boolean = false,
     val showSyncDialog: Boolean = false,
     val selectedEventForNotes: CalendarEvent? = null
-)
+) {
+    val showSettingsDialog: Boolean get() = showSettingsScreen
+}

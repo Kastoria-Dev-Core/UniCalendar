@@ -18,4 +18,5 @@ interface EventRepository {
     suspend fun deleteEventById(id: Long)
     suspend fun clearSyncedEvents()
     suspend fun clearSyncedEventsBySemester(semester: String?)
+    suspend fun clearAllEvents()
 }

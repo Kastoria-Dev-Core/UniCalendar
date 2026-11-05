@@ -19,16 +19,15 @@
     <string name="btn_edit">Edit</string>
     <string name="btn_done">Done</string>
     <string name="btn_close">Close</string>
+    <string name="btn_back">Back</string>
     <string name="btn_confirm_calendar">Confirm Calendar</string>
 
-    <!-- Settings Dialog -->
+    <!-- Settings Screen -->
     <string name="settings_title">Settings</string>
     <string name="tab_appearance">Appearance</string>
-    <string name="tab_semester">Semester</string>
-    <string name="tab_about">About</string>
+    <string name="tab_about">About &amp; Attributions</string>
 
     <string name="settings_section_theme">App Theme</string>
-    <string name="theme_system">System Default</string>
     <string name="theme_light">Light Theme</string>
     <string name="theme_dark">Dark Theme</string>
 
@@ -38,20 +37,27 @@
     <string name="layout_fullscreen">Full Screen Calendar</string>
     <string name="layout_fullscreen_desc">Calendar takes the full screen; tapping any day opens a tab with its schedule.</string>
 
-    <string name="settings_section_language">Language / Γλώσσα</string>
-    <string name="lang_system">System Default (Προεπιλογή)</string>
+    <string name="settings_section_language">Language</string>
     <string name="lang_en">English</string>
-    <string name="lang_el">Ελληνικά (Greek)</string>
+    <string name="lang_el">Ελληνικά</string>
 
-    <string name="settings_active_semester">Active Academic Semester</string>
-    <string name="settings_include_pde">Include ΠΔΕ courses</string>
-    <string name="settings_include_pde_desc">Add pedagogical module classes to your calendar</string>
+    <!-- Data Management & Reset -->
+    <string name="settings_section_data">Schedule Data Management</string>
+    <string name="btn_clear_all_schedules">Clear All Schedules</string>
+    <string name="desc_clear_all_schedules">Deletes all imported schedules, courses, and custom entries to revert the calendar to completely blank.</string>
+    <string name="dialog_clear_all_title">Clear All Schedules?</string>
+    <string name="dialog_clear_all_desc">Are you sure you want to delete all schedules and courses? This will revert the calendar to a completely blank state and cannot be undone.</string>
+    <string name="btn_clear_confirm">Clear Everything</string>
+    <string name="msg_schedules_cleared">All schedules have been cleared</string>
 
-    <string name="about_dept">Department of Informatics, University of Western Macedonia (Kastoria)</string>
-    <string name="about_sync_title">Automated Synchronization</string>
-    <string name="about_sync_desc">Timetables are regularly parsed and updated directly via automated GitHub repository actions.</string>
+    <!-- About & Attributions -->
     <string name="about_version">Version %1$s</string>
-    <string name="about_dev">Developed by KastoriaDevCore</string>
+    <string name="about_built_by">Developed by Georgios Gasparis &amp; KastoriaDevCore</string>
+    <string name="about_org_desc">KastoriaDevCore is an independent student developer organization building digital open-source tools.</string>
+    <string name="about_disclaimer_title">Disclaimer</string>
+    <string name="about_disclaimer_desc">UniCalendar is an independent open-source student project. It is not an official application and is not affiliated with, endorsed by, or sponsored by the University of Western Macedonia (UOWM) or the Department of Informatics.</string>
+    <string name="about_libraries_title">Open-Source Libraries</string>
+    <string name="about_libraries_desc">OkHttp (Apache 2.0), Jsoup (MIT)</string>
 
     <!-- Semester Filtering & Selection -->
     <string name="semester_all">All Semesters</string>
@@ -66,6 +72,7 @@
     <string name="dialog_select_semester_title">Select Your Semester</string>
     <string name="dialog_select_semester_desc">UniCalendar generates an individual calendar tailored to your semester. You can change your active calendar at any time.</string>
     <string name="dialog_select_semester_pde_desc">Add optional pedagogical module lessons to your schedule</string>
+    <string name="settings_include_pde">Include ΠΔΕ courses</string>
 
     <!-- Sync Schedule Dialog -->
     <string name="dialog_sync_title">Sync Timetable</string>

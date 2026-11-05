@@ -46,4 +46,7 @@ interface EventDao {
 
     @Query("DELETE FROM events WHERE isSynced = 1 AND (:semester IS NULL OR semester = :semester)")
     suspend fun clearSyncedEventsBySemester(semester: String?)
+
+    @Query("DELETE FROM events")
+    suspend fun clearAllEvents()
 }
