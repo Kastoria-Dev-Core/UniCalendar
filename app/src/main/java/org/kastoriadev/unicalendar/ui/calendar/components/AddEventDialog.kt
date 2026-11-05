@@ -5,9 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -37,6 +35,7 @@ fun AddEventDialog(
         title: String,
         description: String,
         location: String,
+        semester: String,
         startTime: LocalDateTime,
         endTime: LocalDateTime,
         type: EventType
@@ -45,6 +44,7 @@ fun AddEventDialog(
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
+    var semester by remember { mutableStateOf("") }
     var startHour by remember { mutableStateOf("09") }
     var startMinute by remember { mutableStateOf("00") }
     var endHour by remember { mutableStateOf("11") }
@@ -74,6 +74,14 @@ fun AddEventDialog(
                     value = location,
                     onValueChange = { location = it },
                     label = { Text("Location (e.g. Room 102)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = semester,
+                    onValueChange = { semester = it },
+                    label = { Text("Semester (optional, e.g. 1, 3, 5, PDE)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -159,7 +167,7 @@ fun AddEventDialog(
                     val start = LocalDateTime.of(selectedDate, LocalTime.of(sh, sm))
                     val end = LocalDateTime.of(selectedDate, LocalTime.of(eh, em))
 
-                    onConfirm(title, description, location, start, end, selectedType)
+                    onConfirm(title, description, location, semester, start, end, selectedType)
                 }
             ) {
                 Text("Save")

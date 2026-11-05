@@ -1,6 +1,8 @@
 package org.kastoriadev.unicalendar.ui
 
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -29,6 +31,7 @@ class MainActivity : ComponentActivity() {
                 CalendarScreen(
                     uiState = uiState,
                     onViewModeChange = viewModel::setViewMode,
+                    onSemesterFilterChange = viewModel::setSemesterFilter,
                     onDateSelected = viewModel::onDateSelected,
                     onPreviousMonth = viewModel::onPreviousMonth,
                     onNextMonth = viewModel::onNextMonth,
@@ -43,9 +46,37 @@ class MainActivity : ComponentActivity() {
                     onAddEvent = viewModel::addEvent,
                     onDeleteEvent = viewModel::deleteEvent,
                     onSyncSchedule = viewModel::syncSchedule,
+                    onFileSelected = ::handleFileSelected,
                     onDismissSyncMessage = viewModel::dismissSyncMessage
                 )
             }
         }
+    }
+
+    private fun handleFileSelected(uri: Uri, targetSemester: String?) {
+        try {
+            val fileName = queryFileName(uri)
+            val inputStream = contentResolver.openInputStream(uri)
+            if (inputStream != null) {
+                viewModel.syncFromStream(inputStream, fileName, targetSemester)
+            }
+        } catch (e: Exception) {
+            // Error handled by ViewModel
+        }
+    }
+
+    private fun queryFileName(uri: Uri): String? {
+        var name: String? = null
+        if (uri.scheme == "content") {
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index >= 0) {
+                        name = cursor.getString(index)
+                    }
+                }
+            }
+        }
+        return name ?: uri.lastPathSegment
     }
 }

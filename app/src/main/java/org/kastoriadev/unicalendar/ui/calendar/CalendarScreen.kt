@@ -1,15 +1,13 @@
 package org.kastoriadev.unicalendar.ui.calendar
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -34,7 +32,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,6 +44,7 @@ import org.kastoriadev.unicalendar.ui.calendar.components.EventList
 import org.kastoriadev.unicalendar.ui.calendar.components.LessonNotesSection
 import org.kastoriadev.unicalendar.ui.calendar.components.MonthGrid
 import org.kastoriadev.unicalendar.ui.calendar.components.MonthHeader
+import org.kastoriadev.unicalendar.ui.calendar.components.SemesterFilterRow
 import org.kastoriadev.unicalendar.ui.calendar.components.SyncScheduleDialog
 import org.kastoriadev.unicalendar.ui.calendar.components.WeekGrid
 import org.kastoriadev.unicalendar.ui.calendar.components.WeekHeader
@@ -58,6 +56,7 @@ import java.time.LocalDateTime
 fun CalendarScreen(
     uiState: CalendarUiState,
     onViewModeChange: (CalendarViewMode) -> Unit,
+    onSemesterFilterChange: (String?) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
@@ -73,12 +72,14 @@ fun CalendarScreen(
         title: String,
         description: String,
         location: String,
+        semester: String,
         startTime: LocalDateTime,
         endTime: LocalDateTime,
         type: EventType
     ) -> Unit,
     onDeleteEvent: (CalendarEvent) -> Unit,
-    onSyncSchedule: (String) -> Unit,
+    onSyncSchedule: (url: String, targetSemester: String?) -> Unit,
+    onFileSelected: (uri: Uri, targetSemester: String?) -> Unit,
     onDismissSyncMessage: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -151,7 +152,7 @@ fun CalendarScreen(
                         IconButton(onClick = { onSetSyncDialogVisible(true) }) {
                             Icon(
                                 imageVector = Icons.Default.CloudDownload,
-                                contentDescription = "Sync university schedule"
+                                contentDescription = "Sync schedule"
                             )
                         }
                     }
@@ -182,6 +183,17 @@ fun CalendarScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // Semester Filter Row (+ PDE)
+            SemesterFilterRow(
+                selectedSemester = uiState.selectedSemesterFilter,
+                onSemesterSelected = onSemesterFilterChange
+            )
+
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            )
+
             when (uiState.viewMode) {
                 CalendarViewMode.MONTH -> {
                     MonthHeader(
@@ -262,7 +274,8 @@ fun CalendarScreen(
         if (uiState.showSyncDialog) {
             SyncScheduleDialog(
                 onDismiss = { onSetSyncDialogVisible(false) },
-                onSyncConfirm = onSyncSchedule
+                onSyncConfirm = onSyncSchedule,
+                onFileSelected = onFileSelected
             )
         }
 

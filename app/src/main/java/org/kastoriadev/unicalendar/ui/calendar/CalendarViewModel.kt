@@ -14,6 +14,7 @@ import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.EventType
 import org.kastoriadev.unicalendar.domain.model.SyncResult
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
+import java.io.InputStream
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -37,9 +38,11 @@ class CalendarViewModel(
             repository.getAllEvents()
                 .catch { emit(emptyList()) }
                 .collect { events ->
-                    val grouped = events.groupBy { it.startTime.toLocalDate() }
                     _uiState.update { current ->
+                        val filtered = filterEventsBySemester(events, current.selectedSemesterFilter)
+                        val grouped = filtered.groupBy { it.startTime.toLocalDate() }
                         current.copy(
+                            allEvents = events,
                             monthEvents = grouped,
                             selectedDateEvents = grouped[current.selectedDate] ?: emptyList()
                         )
@@ -50,6 +53,26 @@ class CalendarViewModel(
 
     fun setViewMode(mode: CalendarViewMode) {
         _uiState.update { it.copy(viewMode = mode) }
+    }
+
+    fun setSemesterFilter(semester: String?) {
+        val target = if (semester.equals("ALL", ignoreCase = true)) null else semester
+        _uiState.update { current ->
+            val filtered = filterEventsBySemester(current.allEvents, target)
+            val grouped = filtered.groupBy { it.startTime.toLocalDate() }
+            current.copy(
+                selectedSemesterFilter = target,
+                monthEvents = grouped,
+                selectedDateEvents = grouped[current.selectedDate] ?: emptyList()
+            )
+        }
+    }
+
+    private fun filterEventsBySemester(events: List<CalendarEvent>, semester: String?): List<CalendarEvent> {
+        if (semester.isNullOrBlank() || semester.equals("ALL", ignoreCase = true)) {
+            return events
+        }
+        return events.filter { it.semester.equals(semester, ignoreCase = true) || it.semester.isBlank() }
     }
 
     fun onDateSelected(date: LocalDate) {
@@ -154,6 +177,7 @@ class CalendarViewModel(
         title: String,
         description: String,
         location: String,
+        semester: String,
         startTime: LocalDateTime,
         endTime: LocalDateTime,
         type: EventType
@@ -163,6 +187,7 @@ class CalendarViewModel(
                 title = title.trim(),
                 description = description.trim(),
                 location = location.trim(),
+                semester = semester.trim(),
                 startTime = startTime,
                 endTime = endTime,
                 type = type,
@@ -179,14 +204,31 @@ class CalendarViewModel(
         }
     }
 
-    fun syncSchedule(url: String) {
+    fun syncSchedule(url: String, targetSemester: String? = null) {
         if (url.isBlank()) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSyncing = true, showSyncDialog = false) }
-            val result = syncManager.syncFromUrl(url.trim())
+            val result = syncManager.syncFromUrl(url.trim(), targetSemester)
             val message = when (result) {
-                is SyncResult.Success -> "Successfully imported ${result.importedCount} scheduled events"
+                is SyncResult.Success -> "Successfully imported ${result.importedCount} scheduled courses"
                 is SyncResult.Failure -> "Sync failed: ${result.message}"
+            }
+            _uiState.update {
+                it.copy(
+                    isSyncing = false,
+                    syncMessage = message
+                )
+            }
+        }
+    }
+
+    fun syncFromStream(stream: InputStream, fileName: String?, targetSemester: String? = null) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSyncing = true, showSyncDialog = false) }
+            val result = syncManager.syncFromStream(stream, fileName, targetSemester)
+            val message = when (result) {
+                is SyncResult.Success -> "Successfully imported ${result.importedCount} courses from document"
+                is SyncResult.Failure -> "Import failed: ${result.message}"
             }
             _uiState.update {
                 it.copy(
