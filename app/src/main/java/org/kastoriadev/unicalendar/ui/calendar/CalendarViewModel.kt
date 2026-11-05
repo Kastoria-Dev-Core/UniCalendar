@@ -27,8 +27,7 @@ import java.time.temporal.TemporalAdjusters
 class CalendarViewModel(
     private val repository: EventRepository,
     private val syncManager: ScheduleSyncManager,
-    private val userPreferences: UserPreferences? = null,
-    private val defaultTimetableStreamProvider: (() -> InputStream?)? = null
+    private val userPreferences: UserPreferences? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -43,8 +42,6 @@ class CalendarViewModel(
     )
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
-    private var hasAttemptedInitialSeed = false
-
     init {
         observeEvents()
     }
@@ -54,12 +51,6 @@ class CalendarViewModel(
             repository.getAllEvents()
                 .catch { emit(emptyList()) }
                 .collect { events ->
-                    if (events.isEmpty() && !hasAttemptedInitialSeed && defaultTimetableStreamProvider != null) {
-                        hasAttemptedInitialSeed = true
-                        seedDefaultTimetable()
-                        return@collect
-                    }
-
                     _uiState.update { current ->
                         val filtered = filterEvents(events, current.selectedSemester, current.includePde)
                         val grouped = filtered.groupBy { it.startTime.toLocalDate() }
@@ -70,19 +61,6 @@ class CalendarViewModel(
                         )
                     }
                 }
-        }
-    }
-
-    private fun seedDefaultTimetable() {
-        viewModelScope.launch {
-            try {
-                val stream = defaultTimetableStreamProvider?.invoke()
-                if (stream != null) {
-                    syncManager.syncFromStream(stream, "default_timetable.docx")
-                }
-            } catch (e: Exception) {
-                // Silently fallback if seed fails
-            }
         }
     }
 
@@ -357,8 +335,7 @@ class CalendarViewModel(
     class Factory(
         private val repository: EventRepository,
         private val syncManager: ScheduleSyncManager,
-        private val userPreferences: UserPreferences? = null,
-        private val defaultTimetableStreamProvider: (() -> InputStream?)? = null
+        private val userPreferences: UserPreferences? = null
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -366,8 +343,7 @@ class CalendarViewModel(
                 return CalendarViewModel(
                     repository = repository,
                     syncManager = syncManager,
-                    userPreferences = userPreferences,
-                    defaultTimetableStreamProvider = defaultTimetableStreamProvider
+                    userPreferences = userPreferences
                 ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")

@@ -23,14 +23,7 @@ class MainActivity : ComponentActivity() {
         CalendarViewModel.Factory(
             repository = app.eventRepository,
             syncManager = app.syncManager,
-            userPreferences = app.userPreferences,
-            defaultTimetableStreamProvider = {
-                try {
-                    assets.open("default_timetable.docx")
-                } catch (e: Exception) {
-                    null
-                }
-            }
+            userPreferences = app.userPreferences
         )
     }
 
