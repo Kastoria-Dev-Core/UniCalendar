@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.EventType
@@ -38,35 +41,58 @@ fun DayCell(
     isCurrentMonth: Boolean,
     events: List<CalendarEvent>,
     onDateClick: (LocalDate) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isFullScreen: Boolean = false
 ) {
     val textColor = when {
-        isSelected -> MaterialTheme.colorScheme.onPrimary
+        isSelected && !isFullScreen -> MaterialTheme.colorScheme.onPrimary
+        isSelected && isFullScreen -> MaterialTheme.colorScheme.onPrimaryContainer
         !isCurrentMonth -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
         isToday -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.onSurface
     }
 
-    Box(
-        modifier = modifier
+    val shape = if (isFullScreen) RoundedCornerShape(8.dp) else CircleShape
+    val cellModifier = if (isFullScreen) {
+        modifier
+            .fillMaxSize()
+            .padding(1.5.dp)
+            .clip(shape)
+            .background(
+                if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            )
+            .then(
+                if (isToday) {
+                    Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, shape)
+                } else Modifier
+            )
+            .clickable { onDateClick(date) }
+    } else {
+        modifier
             .aspectRatio(1f)
             .padding(2.dp)
-            .clip(CircleShape)
+            .clip(shape)
             .background(
                 if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
             )
             .then(
                 if (isToday && !isSelected) {
-                    Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, shape)
                 } else Modifier
             )
-            .clickable { onDateClick(date) },
-        contentAlignment = Alignment.Center
+            .clickable { onDateClick(date) }
+    }
+
+    Box(
+        modifier = cellModifier,
+        contentAlignment = if (isFullScreen) Alignment.TopCenter else Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize()
+            verticalArrangement = if (isFullScreen) Arrangement.Top else Arrangement.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(2.dp)
         ) {
             Text(
                 text = date.dayOfMonth.toString(),
@@ -76,23 +102,54 @@ fun DayCell(
             )
 
             if (events.isNotEmpty()) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    modifier = Modifier.padding(top = 2.dp)
-                ) {
-                    val distinctTypes = events.map { it.type }.distinct().take(3)
-                    for (type in distinctTypes) {
-                        val dotColor = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            getEventTypeColor(type)
-                        }
+                if (isFullScreen) {
+                    // Full screen: display mini course label pills
+                    events.take(2).forEach { event ->
+                        val pillColor = getEventTypeColor(event.type)
                         Box(
                             modifier = Modifier
-                                .size(4.dp)
-                                .clip(CircleShape)
-                                .background(dotColor)
+                                .fillMaxWidth()
+                                .padding(vertical = 1.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(pillColor.copy(alpha = 0.25f))
+                                .padding(horizontal = 2.dp)
+                        ) {
+                            Text(
+                                text = event.title,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = pillColor
+                            )
+                        }
+                    }
+                    if (events.size > 2) {
+                        Text(
+                            text = "+${events.size - 2}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
                         )
+                    }
+                } else {
+                    // Split screen: display indicator dots
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        val distinctTypes = events.map { it.type }.distinct().take(3)
+                        for (type in distinctTypes) {
+                            val dotColor = if (isSelected) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                getEventTypeColor(type)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(4.dp)
+                                    .clip(CircleShape)
+                                    .background(dotColor)
+                            )
+                        }
                     }
                 }
             }

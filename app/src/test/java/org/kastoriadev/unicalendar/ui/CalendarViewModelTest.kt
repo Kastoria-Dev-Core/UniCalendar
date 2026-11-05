@@ -17,6 +17,8 @@ import org.junit.Before
 import org.junit.Test
 import org.kastoriadev.unicalendar.data.sync.ScheduleSyncManager
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
+import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
 import org.kastoriadev.unicalendar.ui.calendar.CalendarViewModel
 import java.time.LocalDate
@@ -93,7 +95,7 @@ class CalendarViewModelTest {
             CalendarEvent(
                 id = 5,
                 title = "Personal Assignment Study",
-                semester = "", // Personal event
+                semester = "",
                 startTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(14, 0)),
                 endTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(15, 0))
             )
@@ -146,5 +148,47 @@ class CalendarViewModelTest {
         assertTrue("PDE calendar has PDE course", pdeOnlyTitles.contains("Εισαγωγή στην Παιδαγωγική"))
         assertFalse("PDE calendar does not have Ηλεκτρονική", pdeOnlyTitles.contains("Ηλεκτρονική"))
         assertFalse("PDE calendar does not have Μεταγλωττιστές", pdeOnlyTitles.contains("Μεταγλωττιστές"))
+    }
+
+    @Test
+    fun appearanceSettings_andLayoutModes_toggleCorrectly() = runTest {
+        val repo = FakeEventRepository()
+        val syncManager = ScheduleSyncManager(repo)
+        val viewModel = CalendarViewModel(repo, syncManager)
+
+        // Default layout is SPLIT, theme is SYSTEM
+        assertEquals(DisplayLayoutMode.SPLIT, viewModel.uiState.value.displayLayoutMode)
+        assertEquals(ThemeMode.SYSTEM, viewModel.uiState.value.themeMode)
+        assertFalse(viewModel.uiState.value.showSettingsDialog)
+
+        // Open settings
+        viewModel.openSettingsDialog()
+        assertTrue(viewModel.uiState.value.showSettingsDialog)
+
+        // Change theme to DARK
+        viewModel.setThemeMode(ThemeMode.DARK)
+        assertEquals(ThemeMode.DARK, viewModel.uiState.value.themeMode)
+
+        // Change layout to FULLSCREEN
+        viewModel.setDisplayLayoutMode(DisplayLayoutMode.FULLSCREEN)
+        assertEquals(DisplayLayoutMode.FULLSCREEN, viewModel.uiState.value.displayLayoutMode)
+
+        // In FULLSCREEN mode, selecting a date opens the Day Details sheet
+        viewModel.onDateSelected(LocalDate.of(2026, 11, 4))
+        assertTrue(viewModel.uiState.value.showDayDetailsSheet)
+
+        // Dismiss sheet
+        viewModel.dismissDayDetailsSheet()
+        assertFalse(viewModel.uiState.value.showDayDetailsSheet)
+
+        // Switch back to SPLIT mode
+        viewModel.setDisplayLayoutMode(DisplayLayoutMode.SPLIT)
+        viewModel.onDateSelected(LocalDate.of(2026, 11, 5))
+        // In SPLIT mode, showDayDetailsSheet stays false because details are shown below
+        assertFalse(viewModel.uiState.value.showDayDetailsSheet)
+
+        // Close settings
+        viewModel.dismissSettingsDialog()
+        assertFalse(viewModel.uiState.value.showSettingsDialog)
     }
 }
