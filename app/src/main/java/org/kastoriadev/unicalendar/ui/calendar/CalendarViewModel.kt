@@ -12,8 +12,10 @@ import kotlinx.coroutines.launch
 import org.kastoriadev.unicalendar.data.preferences.UserPreferences
 import org.kastoriadev.unicalendar.data.sync.ScheduleSyncManager
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
 import org.kastoriadev.unicalendar.domain.model.EventType
 import org.kastoriadev.unicalendar.domain.model.SyncResult
+import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
 import java.io.InputStream
 import java.time.DayOfWeek
@@ -31,6 +33,8 @@ class CalendarViewModel(
 
     private val _uiState = MutableStateFlow(
         CalendarUiState(
+            themeMode = userPreferences?.themeMode ?: ThemeMode.SYSTEM,
+            displayLayoutMode = userPreferences?.displayLayoutMode ?: DisplayLayoutMode.SPLIT,
             selectedSemester = userPreferences?.selectedSemester,
             includePde = userPreferences?.includePde ?: false,
             showSemesterPrompt = userPreferences?.let { !it.hasCompletedOnboarding } ?: false,
@@ -84,6 +88,32 @@ class CalendarViewModel(
 
     fun setViewMode(mode: CalendarViewMode) {
         _uiState.update { it.copy(viewMode = mode) }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        userPreferences?.themeMode = mode
+        _uiState.update { it.copy(themeMode = mode) }
+    }
+
+    fun setDisplayLayoutMode(mode: DisplayLayoutMode) {
+        userPreferences?.displayLayoutMode = mode
+        _uiState.update { it.copy(displayLayoutMode = mode) }
+    }
+
+    fun openSettingsDialog() {
+        _uiState.update { it.copy(showSettingsDialog = true) }
+    }
+
+    fun dismissSettingsDialog() {
+        _uiState.update { it.copy(showSettingsDialog = false) }
+    }
+
+    fun openDayDetailsSheet() {
+        _uiState.update { it.copy(showDayDetailsSheet = true) }
+    }
+
+    fun dismissDayDetailsSheet() {
+        _uiState.update { it.copy(showDayDetailsSheet = false) }
     }
 
     fun setSemesterFilter(semester: String?) {
@@ -156,11 +186,13 @@ class CalendarViewModel(
     fun onDateSelected(date: LocalDate) {
         val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         _uiState.update { current ->
+            val shouldOpenSheet = current.displayLayoutMode == DisplayLayoutMode.FULLSCREEN
             current.copy(
                 selectedDate = date,
                 currentMonth = YearMonth.from(date),
                 currentWeekStart = weekStart,
-                selectedDateEvents = current.monthEvents[date] ?: emptyList()
+                selectedDateEvents = current.monthEvents[date] ?: emptyList(),
+                showDayDetailsSheet = shouldOpenSheet
             )
         }
     }
@@ -280,6 +312,11 @@ class CalendarViewModel(
         viewModelScope.launch {
             repository.deleteEvent(event)
         }
+    }
+
+    fun syncFromGitHub(targetSemester: String? = null) {
+        val githubTimetableUrl = "https://raw.githubusercontent.com/Kastoria-Dev-Core/UniCalendar/main/app/src/main/assets/default_timetable.docx"
+        syncSchedule(githubTimetableUrl, targetSemester)
     }
 
     fun syncSchedule(url: String, targetSemester: String? = null) {

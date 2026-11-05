@@ -7,9 +7,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import org.kastoriadev.unicalendar.UniCalendarApp
+import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.ui.calendar.CalendarScreen
 import org.kastoriadev.unicalendar.ui.calendar.CalendarViewModel
 import org.kastoriadev.unicalendar.ui.theme.UniCalendarTheme
@@ -36,17 +38,27 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            UniCalendarTheme {
-                val uiState by viewModel.uiState.collectAsState()
+            val uiState by viewModel.uiState.collectAsState()
 
+            val isDarkTheme = when (uiState.themeMode) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+
+            UniCalendarTheme(darkTheme = isDarkTheme) {
                 CalendarScreen(
                     uiState = uiState,
                     onViewModeChange = viewModel::setViewMode,
                     onSemesterFilterChange = viewModel::setSemesterFilter,
-                    onOpenSemesterPrompt = viewModel::openSemesterPrompt,
+                    onOpenSettings = viewModel::openSettingsDialog,
+                    onDismissSettings = viewModel::dismissSettingsDialog,
+                    onThemeModeChange = viewModel::setThemeMode,
+                    onDisplayLayoutModeChange = viewModel::setDisplayLayoutMode,
                     onDismissSemesterPrompt = viewModel::dismissSemesterPrompt,
                     onSemesterConfirmed = viewModel::onSemesterConfirmed,
                     onDateSelected = viewModel::onDateSelected,
+                    onDismissDayDetailsSheet = viewModel::dismissDayDetailsSheet,
                     onPreviousMonth = viewModel::onPreviousMonth,
                     onNextMonth = viewModel::onNextMonth,
                     onPreviousWeek = viewModel::onPreviousWeek,
@@ -59,7 +71,7 @@ class MainActivity : ComponentActivity() {
                     onSaveNotes = viewModel::onSaveNotes,
                     onAddEvent = viewModel::addEvent,
                     onDeleteEvent = viewModel::deleteEvent,
-                    onSyncSchedule = viewModel::syncSchedule,
+                    onSyncFromGitHub = viewModel::syncFromGitHub,
                     onFileSelected = ::handleFileSelected,
                     onDismissSyncMessage = viewModel::dismissSyncMessage
                 )

@@ -13,9 +13,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -34,19 +37,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SyncScheduleDialog(
     onDismiss: () -> Unit,
-    onSyncConfirm: (url: String, targetSemester: String?) -> Unit,
+    onSyncFromGitHub: (targetSemester: String?) -> Unit,
     onFileSelected: (uri: Uri, targetSemester: String?) -> Unit
 ) {
-    var url by remember { mutableStateOf("") }
     var selectedSemester by remember { mutableStateOf("ALL") }
     var dropdownExpanded by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -58,7 +60,7 @@ fun SyncScheduleDialog(
     }
 
     val semesterOptions = listOf(
-        "ALL" to "All Semesters (Import Everything)",
+        "ALL" to "All Semesters (Import Full Timetable)",
         "1" to "1ο Εξάμηνο (Semester 1)",
         "2" to "2ο Εξάμηνο (Semester 2)",
         "3" to "3ο Εξάμηνο (Semester 3)",
@@ -72,19 +74,33 @@ fun SyncScheduleDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = "Sync University Schedule") },
+        icon = {
+            Icon(
+                imageVector = Icons.Default.CloudSync,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(32.dp)
+            )
+        },
+        title = {
+            Text(
+                text = "Sync Timetable",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "Supports department .docx timetable files, announcement links, or .ics feeds.",
+                    text = "Sync your university schedule automatically from the central GitHub repository or import a local document.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                // Semester Filter Dropdown
+                // Semester Target Filter Dropdown
                 ExposedDropdownMenuBox(
                     expanded = dropdownExpanded,
                     onExpandedChange = { dropdownExpanded = it },
@@ -94,7 +110,7 @@ fun SyncScheduleDialog(
                         value = semesterOptions.firstOrNull { it.first == selectedSemester }?.second ?: selectedSemester,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Filter by Semester") },
+                        label = { Text("Target Semester") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -116,29 +132,34 @@ fun SyncScheduleDialog(
                     }
                 }
 
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = {
-                        url = it
-                        errorMessage = null
-                    },
-                    label = { Text("Schedule Web URL") },
-                    placeholder = { Text("https://cs.uowm.gr/.../program.docx") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                if (errorMessage != null) {
+                // Primary Automated Action: Sync from GitHub
+                Button(
+                    onClick = {
+                        val targetSem = if (selectedSemester == "ALL") null else selectedSemester
+                        onSyncFromGitHub(targetSem)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CloudDownload,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = errorMessage ?: "",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
+                        text = "Sync from GitHub Repo",
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                // Direct local file import button (.docx or .ics)
+                // Secondary Manual Action: Pick local docx / ics
                 OutlinedButton(
                     onClick = {
                         filePickerLauncher.launch(
@@ -150,7 +171,9 @@ fun SyncScheduleDialog(
                             )
                         )
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.UploadFile,
@@ -158,27 +181,14 @@ fun SyncScheduleDialog(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Choose Local .docx / .ics File")
+                    Text(text = "Choose Local .docx / .ics")
                 }
             }
         },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (url.isBlank() || (!url.startsWith("http://") && !url.startsWith("https://"))) {
-                        errorMessage = "Please enter a valid HTTP/HTTPS URL"
-                        return@Button
-                    }
-                    val targetSem = if (selectedSemester == "ALL") null else selectedSemester
-                    onSyncConfirm(url.trim(), targetSem)
-                }
-            ) {
-                Text("Fetch & Sync")
-            }
-        },
+        confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Close")
             }
         }
     )

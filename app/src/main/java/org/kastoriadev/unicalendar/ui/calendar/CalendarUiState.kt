@@ -1,6 +1,8 @@
 package org.kastoriadev.unicalendar.ui.calendar
 
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
+import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -8,10 +10,14 @@ import java.time.temporal.TemporalAdjusters
 
 data class CalendarUiState(
     val viewMode: CalendarViewMode = CalendarViewMode.MONTH,
-    val selectedSemester: String? = null, // e.g. "1", "2", "3", "4", "5", "6", "7", "8", "PDE", "ALL"
+    val displayLayoutMode: DisplayLayoutMode = DisplayLayoutMode.SPLIT,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val selectedSemester: String? = null,
     val includePde: Boolean = false,
     val showSemesterPrompt: Boolean = false,
     val canDismissSemesterPrompt: Boolean = true,
+    val showSettingsDialog: Boolean = false,
+    val showDayDetailsSheet: Boolean = false,
     val currentMonth: YearMonth = YearMonth.now(),
     val currentWeekStart: LocalDate = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
     val selectedDate: LocalDate = LocalDate.now(),

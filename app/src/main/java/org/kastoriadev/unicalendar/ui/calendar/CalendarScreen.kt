@@ -1,23 +1,19 @@
 package org.kastoriadev.unicalendar.ui.calendar
 
 import android.net.Uri
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarViewWeek
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -37,13 +33,15 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
 import org.kastoriadev.unicalendar.domain.model.EventType
+import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.ui.calendar.components.AddEventDialog
+import org.kastoriadev.unicalendar.ui.calendar.components.DayDetailsSheet
 import org.kastoriadev.unicalendar.ui.calendar.components.DaysOfWeekHeader
 import org.kastoriadev.unicalendar.ui.calendar.components.EditNoteDialog
 import org.kastoriadev.unicalendar.ui.calendar.components.EventList
@@ -55,6 +53,7 @@ import org.kastoriadev.unicalendar.ui.calendar.components.SemesterSelectPromptDi
 import org.kastoriadev.unicalendar.ui.calendar.components.SyncScheduleDialog
 import org.kastoriadev.unicalendar.ui.calendar.components.WeekGrid
 import org.kastoriadev.unicalendar.ui.calendar.components.WeekHeader
+import org.kastoriadev.unicalendar.ui.settings.SettingsDialog
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -64,10 +63,14 @@ fun CalendarScreen(
     uiState: CalendarUiState,
     onViewModeChange: (CalendarViewMode) -> Unit,
     onSemesterFilterChange: (String?) -> Unit,
-    onOpenSemesterPrompt: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onDismissSettings: () -> Unit,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    onDisplayLayoutModeChange: (DisplayLayoutMode) -> Unit,
     onDismissSemesterPrompt: () -> Unit,
     onSemesterConfirmed: (semester: String, includePde: Boolean) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
+    onDismissDayDetailsSheet: () -> Unit,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onPreviousWeek: () -> Unit,
@@ -88,7 +91,7 @@ fun CalendarScreen(
         type: EventType
     ) -> Unit,
     onDeleteEvent: (CalendarEvent) -> Unit,
-    onSyncSchedule: (url: String, targetSemester: String?) -> Unit,
+    onSyncFromGitHub: (targetSemester: String?) -> Unit,
     onFileSelected: (uri: Uri, targetSemester: String?) -> Unit,
     onDismissSyncMessage: () -> Unit,
     modifier: Modifier = Modifier
@@ -107,25 +110,11 @@ fun CalendarScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column(
-                        modifier = Modifier.clickable { onOpenSemesterPrompt() }
-                    ) {
-                        Text(
-                            text = "UniCalendar",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        val semLabel = when (uiState.selectedSemester) {
-                            null, "ALL" -> "All Semesters"
-                            "PDE" -> "ΠΔΕ (Pedagogical Module)"
-                            else -> "Semester ${uiState.selectedSemester}" + if (uiState.includePde) " (+ ΠΔΕ)" else ""
-                        }
-                        Text(
-                            text = "Active: $semLabel ▾",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                    Text(
+                        text = "UniCalendar",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge
+                    )
                 },
                 actions = {
                     // View Switcher (Week / Month)
@@ -165,14 +154,7 @@ fun CalendarScreen(
                         }
                     }
 
-                    // Semester Selector Dialog Trigger
-                    IconButton(onClick = onOpenSemesterPrompt) {
-                        Icon(
-                            imageVector = Icons.Default.School,
-                            contentDescription = "Select active semester"
-                        )
-                    }
-
+                    // Sync Schedule Button
                     if (uiState.isSyncing) {
                         CircularProgressIndicator(
                             modifier = Modifier
@@ -187,6 +169,14 @@ fun CalendarScreen(
                                 contentDescription = "Sync schedule"
                             )
                         }
+                    }
+
+                    // Settings Gear Button
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings"
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -226,6 +216,8 @@ fun CalendarScreen(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
             )
 
+            val isFullScreen = uiState.displayLayoutMode == DisplayLayoutMode.FULLSCREEN
+
             when (uiState.viewMode) {
                 CalendarViewMode.MONTH -> {
                     MonthHeader(
@@ -237,28 +229,42 @@ fun CalendarScreen(
 
                     DaysOfWeekHeader()
 
-                    MonthGrid(
-                        currentMonth = uiState.currentMonth,
-                        selectedDate = uiState.selectedDate,
-                        eventsMap = uiState.monthEvents,
-                        onDateClick = onDateSelected
-                    )
+                    if (isFullScreen) {
+                        // Full Screen Calendar: takes full remaining space
+                        MonthGrid(
+                            currentMonth = uiState.currentMonth,
+                            selectedDate = uiState.selectedDate,
+                            eventsMap = uiState.monthEvents,
+                            onDateClick = onDateSelected,
+                            isFullScreen = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        // Split Screen: calendar on top half, details below
+                        MonthGrid(
+                            currentMonth = uiState.currentMonth,
+                            selectedDate = uiState.selectedDate,
+                            eventsMap = uiState.monthEvents,
+                            onDateClick = onDateSelected,
+                            isFullScreen = false
+                        )
 
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        thickness = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                        HorizontalDivider(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            thickness = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
 
-                    EventList(
-                        selectedDate = uiState.selectedDate,
-                        events = uiState.selectedDateEvents,
-                        onEditNoteClick = onEditNoteClick,
-                        onDeleteEvent = onDeleteEvent,
-                        modifier = Modifier.weight(1f)
-                    )
+                        EventList(
+                            selectedDate = uiState.selectedDate,
+                            events = uiState.selectedDateEvents,
+                            onEditNoteClick = onEditNoteClick,
+                            onDeleteEvent = onDeleteEvent,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
 
                 CalendarViewMode.WEEK -> {
@@ -269,32 +275,70 @@ fun CalendarScreen(
                         onTodayClick = onTodayClick
                     )
 
-                    WeekGrid(
-                        weekStart = uiState.currentWeekStart,
-                        selectedDate = uiState.selectedDate,
-                        eventsMap = uiState.monthEvents,
-                        onDateClick = onDateSelected
-                    )
+                    if (isFullScreen) {
+                        // Full Screen Week: schedule fills the screen
+                        WeekGrid(
+                            weekStart = uiState.currentWeekStart,
+                            selectedDate = uiState.selectedDate,
+                            eventsMap = uiState.monthEvents,
+                            onDateClick = onDateSelected,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        // Split Screen: week schedule on top, lesson notes below
+                        WeekGrid(
+                            weekStart = uiState.currentWeekStart,
+                            selectedDate = uiState.selectedDate,
+                            eventsMap = uiState.monthEvents,
+                            onDateClick = onDateSelected
+                        )
 
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        thickness = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                        HorizontalDivider(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            thickness = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
 
-                    LessonNotesSection(
-                        selectedDate = uiState.selectedDate,
-                        events = uiState.selectedDateEvents,
-                        onEditNoteClick = onEditNoteClick,
-                        onDeleteEvent = onDeleteEvent,
-                        modifier = Modifier.weight(1f)
-                    )
+                        LessonNotesSection(
+                            selectedDate = uiState.selectedDate,
+                            events = uiState.selectedDateEvents,
+                            onEditNoteClick = onEditNoteClick,
+                            onDeleteEvent = onDeleteEvent,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }
 
+        // Day Details Sheet (when tapping a day in Full Screen mode)
+        if (uiState.showDayDetailsSheet && uiState.displayLayoutMode == DisplayLayoutMode.FULLSCREEN) {
+            DayDetailsSheet(
+                selectedDate = uiState.selectedDate,
+                events = uiState.selectedDateEvents,
+                onEditNoteClick = onEditNoteClick,
+                onDeleteEvent = onDeleteEvent,
+                onDismiss = onDismissDayDetailsSheet
+            )
+        }
+
+        // Settings Dialog
+        if (uiState.showSettingsDialog) {
+            SettingsDialog(
+                themeMode = uiState.themeMode,
+                displayLayoutMode = uiState.displayLayoutMode,
+                selectedSemester = uiState.selectedSemester,
+                includePde = uiState.includePde,
+                onThemeModeChange = onThemeModeChange,
+                onDisplayLayoutModeChange = onDisplayLayoutModeChange,
+                onSemesterChange = onSemesterConfirmed,
+                onDismiss = onDismissSettings
+            )
+        }
+
+        // Onboarding Semester Prompt Dialog (First launch)
         if (uiState.showSemesterPrompt) {
             SemesterSelectPromptDialog(
                 currentSemester = uiState.selectedSemester,
@@ -305,6 +349,7 @@ fun CalendarScreen(
             )
         }
 
+        // Add Event Dialog
         if (uiState.showAddDialog) {
             AddEventDialog(
                 selectedDate = uiState.selectedDate,
@@ -313,14 +358,16 @@ fun CalendarScreen(
             )
         }
 
+        // Sync Dialog (GitHub Repo automated sync & Local docx/ics file import)
         if (uiState.showSyncDialog) {
             SyncScheduleDialog(
                 onDismiss = { onSetSyncDialogVisible(false) },
-                onSyncConfirm = onSyncSchedule,
+                onSyncFromGitHub = onSyncFromGitHub,
                 onFileSelected = onFileSelected
             )
         }
 
+        // Edit Notes Dialog
         uiState.selectedEventForNotes?.let { event ->
             EditNoteDialog(
                 event = event,

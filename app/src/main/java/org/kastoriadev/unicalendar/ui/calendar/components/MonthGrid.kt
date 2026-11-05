@@ -18,7 +18,8 @@ fun MonthGrid(
     selectedDate: LocalDate,
     eventsMap: Map<LocalDate, List<CalendarEvent>>,
     onDateClick: (LocalDate) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isFullScreen: Boolean = false
 ) {
     val today = LocalDate.now()
     val days = calculateCalendarDays(currentMonth)
@@ -30,7 +31,15 @@ fun MonthGrid(
     ) {
         val weeks = days.chunked(7)
         for (week in weeks) {
-            Row(modifier = Modifier.fillMaxWidth()) {
+            val rowModifier = if (isFullScreen) {
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            } else {
+                Modifier.fillMaxWidth()
+            }
+
+            Row(modifier = rowModifier) {
                 for (date in week) {
                     val isCurrentMonth = date.month == currentMonth.month && date.year == currentMonth.year
                     val isSelected = date == selectedDate
@@ -44,7 +53,8 @@ fun MonthGrid(
                         isCurrentMonth = isCurrentMonth,
                         events = dayEvents,
                         onDateClick = onDateClick,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        isFullScreen = isFullScreen
                     )
                 }
             }
@@ -52,35 +62,27 @@ fun MonthGrid(
     }
 }
 
-fun calculateCalendarDays(yearMonth: YearMonth): List<LocalDate> {
+fun calculateCalendarDays(month: YearMonth): List<LocalDate> {
+    val firstDayOfMonth = month.atDay(1)
+    val lastDayOfMonth = month.atEndOfMonth()
+
+    val daysFromPrevMonth = (firstDayOfMonth.dayOfWeek.value - DayOfWeek.MONDAY.value + 7) % 7
+    val startDate = firstDayOfMonth.minusDays(daysFromPrevMonth.toLong())
+
+    val daysToNextMonth = (DayOfWeek.SUNDAY.value - lastDayOfMonth.dayOfWeek.value + 7) % 7
+    val endDate = lastDayOfMonth.plusDays(daysToNextMonth.toLong())
+
     val days = mutableListOf<LocalDate>()
-    val firstDayOfMonth = yearMonth.atDay(1)
-    val dayOfWeekValue = firstDayOfMonth.dayOfWeek.value // 1 (Monday) to 7 (Sunday)
-
-    // Leading days from previous month
-    val leadingDays = dayOfWeekValue - 1
-    if (leadingDays > 0) {
-        val prevMonth = yearMonth.minusMonths(1)
-        val prevMonthLength = prevMonth.lengthOfMonth()
-        for (i in (prevMonthLength - leadingDays + 1)..prevMonthLength) {
-            days.add(prevMonth.atDay(i))
-        }
+    var current = startDate
+    while (!current.isAfter(endDate)) {
+        days.add(current)
+        current = current.plusDays(1)
     }
 
-    // Days of current month
-    val currentMonthLength = yearMonth.lengthOfMonth()
-    for (i in 1..currentMonthLength) {
-        days.add(yearMonth.atDay(i))
-    }
-
-    // Trailing days from next month to fill out the last week
-    val remainder = days.size % 7
-    if (remainder != 0) {
-        val trailingDays = 7 - remainder
-        val nextMonth = yearMonth.plusMonths(1)
-        for (i in 1..trailingDays) {
-            days.add(nextMonth.atDay(i))
-        }
+    // Ensure 5 or 6 full weeks
+    while (days.size < 35 || (days.size % 7 != 0)) {
+        days.add(current)
+        current = current.plusDays(1)
     }
 
     return days

@@ -2,6 +2,8 @@ package org.kastoriadev.unicalendar.data.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
+import org.kastoriadev.unicalendar.domain.model.ThemeMode
 
 class UserPreferences(context: Context) {
 
@@ -25,10 +27,38 @@ class UserPreferences(context: Context) {
             prefs.edit().putBoolean(KEY_HAS_COMPLETED_ONBOARDING, value).apply()
         }
 
+    var themeMode: ThemeMode
+        get() {
+            val name = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
+            return try {
+                ThemeMode.valueOf(name)
+            } catch (e: Exception) {
+                ThemeMode.SYSTEM
+            }
+        }
+        set(value) {
+            prefs.edit().putString(KEY_THEME_MODE, value.name).apply()
+        }
+
+    var displayLayoutMode: DisplayLayoutMode
+        get() {
+            val name = prefs.getString(KEY_DISPLAY_LAYOUT_MODE, DisplayLayoutMode.SPLIT.name) ?: DisplayLayoutMode.SPLIT.name
+            return try {
+                DisplayLayoutMode.valueOf(name)
+            } catch (e: Exception) {
+                DisplayLayoutMode.SPLIT
+            }
+        }
+        set(value) {
+            prefs.edit().putString(KEY_DISPLAY_LAYOUT_MODE, value.name).apply()
+        }
+
     companion object {
         private const val PREFS_NAME = "unicalendar_user_prefs"
         private const val KEY_SELECTED_SEMESTER = "key_selected_semester"
         private const val KEY_INCLUDE_PDE = "key_include_pde"
         private const val KEY_HAS_COMPLETED_ONBOARDING = "key_has_completed_onboarding"
+        private const val KEY_THEME_MODE = "key_theme_mode"
+        private const val KEY_DISPLAY_LAYOUT_MODE = "key_display_layout_mode"
     }
 }
