@@ -6,6 +6,7 @@ import java.time.LocalDate
 
 interface EventRepository {
     fun getAllEvents(): Flow<List<CalendarEvent>>
+    fun getEventsBySemester(semester: String?): Flow<List<CalendarEvent>>
     fun getEventsForDate(date: LocalDate): Flow<List<CalendarEvent>>
     fun getEventsForMonth(year: Int, month: Int): Flow<List<CalendarEvent>>
     suspend fun getEventById(id: Long): CalendarEvent?
@@ -16,4 +17,5 @@ interface EventRepository {
     suspend fun deleteEvent(event: CalendarEvent)
     suspend fun deleteEventById(id: Long)
     suspend fun clearSyncedEvents()
+    suspend fun clearSyncedEventsBySemester(semester: String?)
 }

@@ -21,6 +21,12 @@ class EventRepositoryImpl(
         }
     }
 
+    override fun getEventsBySemester(semester: String?): Flow<List<CalendarEvent>> {
+        return dao.getEventsBySemester(semester).map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
     override fun getEventsForDate(date: LocalDate): Flow<List<CalendarEvent>> {
         val startOfDay = date.atStartOfDay()
         val endOfDay = date.atTime(LocalTime.MAX)
@@ -70,12 +76,17 @@ class EventRepositoryImpl(
         dao.clearSyncedEvents()
     }
 
+    override suspend fun clearSyncedEventsBySemester(semester: String?) {
+        dao.clearSyncedEventsBySemester(semester)
+    }
+
     private fun EventEntity.toDomain(): CalendarEvent = CalendarEvent(
         id = id,
         title = title,
         description = description,
         location = location,
         notes = notes,
+        semester = semester,
         startTime = startTime,
         endTime = endTime,
         type = type,
@@ -89,6 +100,7 @@ class EventRepositoryImpl(
         description = description,
         location = location,
         notes = notes,
+        semester = semester,
         startTime = startTime,
         endTime = endTime,
         type = type,
