@@ -22,14 +22,17 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +45,10 @@ fun DayDetailsSheet(
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
-    val dateHeaderFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.getDefault())
+    val locale = LocalConfiguration.current.locales[0]
+    val dateHeaderFormatter = remember(locale) {
+        DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", locale)
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -67,7 +73,7 @@ fun DayDetailsSheet(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "${events.size} scheduled courses & lessons",
+                        text = stringResource(R.string.scheduled_courses_count_format, events.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -76,7 +82,7 @@ fun DayDetailsSheet(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Close"
+                        contentDescription = stringResource(R.string.btn_close)
                     )
                 }
             }
@@ -94,7 +100,7 @@ fun DayDetailsSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No lessons or events scheduled for this day",
+                        text = stringResource(R.string.no_events),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

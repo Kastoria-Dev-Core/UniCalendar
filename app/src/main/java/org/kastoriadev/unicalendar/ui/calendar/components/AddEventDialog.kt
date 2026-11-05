@@ -20,7 +20,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
 import org.kastoriadev.unicalendar.domain.model.EventType
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -52,9 +54,12 @@ fun AddEventDialog(
     var selectedType by remember { mutableStateOf(EventType.LECTURE) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    val emptyTitleError = stringResource(R.string.error_empty_title)
+    val invalidTimeError = stringResource(R.string.error_invalid_time)
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = "Add Event for ${selectedDate}") },
+        title = { Text(text = stringResource(R.string.dialog_add_title, selectedDate.toString())) },
         text = {
             Column(
                 modifier = Modifier
@@ -65,7 +70,7 @@ fun AddEventDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Title") },
+                    label = { Text(stringResource(R.string.field_title)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -73,7 +78,7 @@ fun AddEventDialog(
                 OutlinedTextField(
                     value = location,
                     onValueChange = { location = it },
-                    label = { Text("Location (e.g. Room 102)") },
+                    label = { Text(stringResource(R.string.field_location_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -81,7 +86,7 @@ fun AddEventDialog(
                 OutlinedTextField(
                     value = semester,
                     onValueChange = { semester = it },
-                    label = { Text("Semester (optional, e.g. 1, 3, 5, PDE)") },
+                    label = { Text(stringResource(R.string.field_semester_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -89,12 +94,12 @@ fun AddEventDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Description") },
+                    label = { Text(stringResource(R.string.field_description_input)) },
                     maxLines = 3,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Text(text = "Time")
+                Text(text = stringResource(R.string.field_time))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -102,30 +107,30 @@ fun AddEventDialog(
                     OutlinedTextField(
                         value = startHour,
                         onValueChange = { if (it.length <= 2) startHour = it },
-                        label = { Text("Start H") },
+                        label = { Text(stringResource(R.string.field_start_h)) },
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = startMinute,
                         onValueChange = { if (it.length <= 2) startMinute = it },
-                        label = { Text("Start M") },
+                        label = { Text(stringResource(R.string.field_start_m)) },
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = endHour,
                         onValueChange = { if (it.length <= 2) endHour = it },
-                        label = { Text("End H") },
+                        label = { Text(stringResource(R.string.field_end_h)) },
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = endMinute,
                         onValueChange = { if (it.length <= 2) endMinute = it },
-                        label = { Text("End M") },
+                        label = { Text(stringResource(R.string.field_end_m)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
 
-                Text(text = "Category")
+                Text(text = stringResource(R.string.field_category))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -134,7 +139,7 @@ fun AddEventDialog(
                         FilterChip(
                             selected = selectedType == type,
                             onClick = { selectedType = type },
-                            label = { Text(type.name) }
+                            label = { Text(stringResource(type.displayNameRes)) }
                         )
                     }
                 }
@@ -151,7 +156,7 @@ fun AddEventDialog(
             Button(
                 onClick = {
                     if (title.isBlank()) {
-                        errorMessage = "Title cannot be empty"
+                        errorMessage = emptyTitleError
                         return@Button
                     }
                     val sh = startHour.toIntOrNull() ?: 9
@@ -160,7 +165,7 @@ fun AddEventDialog(
                     val em = endMinute.toIntOrNull() ?: 0
 
                     if (sh !in 0..23 || sm !in 0..59 || eh !in 0..23 || em !in 0..59) {
-                        errorMessage = "Please enter valid time values (00-23, 00-59)"
+                        errorMessage = invalidTimeError
                         return@Button
                     }
 
@@ -170,12 +175,12 @@ fun AddEventDialog(
                     onConfirm(title, description, location, semester, start, end, selectedType)
                 }
             ) {
-                Text("Save")
+                Text(stringResource(R.string.btn_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.btn_cancel))
             }
         }
     )

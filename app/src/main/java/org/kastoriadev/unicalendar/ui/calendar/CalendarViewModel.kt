@@ -9,14 +9,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.kastoriadev.unicalendar.R
 import org.kastoriadev.unicalendar.data.preferences.UserPreferences
 import org.kastoriadev.unicalendar.data.sync.ScheduleSyncManager
+import org.kastoriadev.unicalendar.domain.model.AppLanguage
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
 import org.kastoriadev.unicalendar.domain.model.EventType
 import org.kastoriadev.unicalendar.domain.model.SyncResult
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
+import org.kastoriadev.unicalendar.util.UiText
 import java.io.InputStream
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -34,6 +37,7 @@ class CalendarViewModel(
         CalendarUiState(
             themeMode = userPreferences?.themeMode ?: ThemeMode.SYSTEM,
             displayLayoutMode = userPreferences?.displayLayoutMode ?: DisplayLayoutMode.SPLIT,
+            appLanguage = userPreferences?.appLanguage ?: AppLanguage.SYSTEM,
             selectedSemester = userPreferences?.selectedSemester,
             includePde = userPreferences?.includePde ?: false,
             showSemesterPrompt = userPreferences?.let { !it.hasCompletedOnboarding } ?: false,
@@ -71,6 +75,11 @@ class CalendarViewModel(
     fun setThemeMode(mode: ThemeMode) {
         userPreferences?.themeMode = mode
         _uiState.update { it.copy(themeMode = mode) }
+    }
+
+    fun setAppLanguage(language: AppLanguage) {
+        userPreferences?.appLanguage = language
+        _uiState.update { it.copy(appLanguage = language) }
     }
 
     fun setDisplayLayoutMode(mode: DisplayLayoutMode) {
@@ -303,8 +312,8 @@ class CalendarViewModel(
             _uiState.update { it.copy(isSyncing = true, showSyncDialog = false) }
             val result = syncManager.syncFromUrl(url.trim(), targetSemester)
             val message = when (result) {
-                is SyncResult.Success -> "Successfully imported ${result.importedCount} scheduled courses"
-                is SyncResult.Failure -> "Sync failed: ${result.message}"
+                is SyncResult.Success -> UiText.StringResource(R.string.sync_success_format, result.importedCount)
+                is SyncResult.Failure -> UiText.StringResource(R.string.sync_failed_format, result.message)
             }
             _uiState.update {
                 it.copy(
@@ -320,8 +329,8 @@ class CalendarViewModel(
             _uiState.update { it.copy(isSyncing = true, showSyncDialog = false) }
             val result = syncManager.syncFromStream(stream, fileName, targetSemester)
             val message = when (result) {
-                is SyncResult.Success -> "Successfully imported ${result.importedCount} courses from document"
-                is SyncResult.Failure -> "Import failed: ${result.message}"
+                is SyncResult.Success -> UiText.StringResource(R.string.sync_success_stream_format, result.importedCount)
+                is SyncResult.Failure -> UiText.StringResource(R.string.import_failed_format, result.message)
             }
             _uiState.update {
                 it.copy(

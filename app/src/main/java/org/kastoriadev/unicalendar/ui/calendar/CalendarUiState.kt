@@ -1,8 +1,10 @@
 package org.kastoriadev.unicalendar.ui.calendar
 
+import org.kastoriadev.unicalendar.domain.model.AppLanguage
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
+import org.kastoriadev.unicalendar.util.UiText
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -12,6 +14,7 @@ data class CalendarUiState(
     val viewMode: CalendarViewMode = CalendarViewMode.MONTH,
     val displayLayoutMode: DisplayLayoutMode = DisplayLayoutMode.SPLIT,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val selectedSemester: String? = null,
     val includePde: Boolean = false,
     val showSemesterPrompt: Boolean = false,
@@ -25,7 +28,7 @@ data class CalendarUiState(
     val monthEvents: Map<LocalDate, List<CalendarEvent>> = emptyMap(),
     val selectedDateEvents: List<CalendarEvent> = emptyList(),
     val isSyncing: Boolean = false,
-    val syncMessage: String? = null,
+    val syncMessage: UiText? = null,
     val showAddDialog: Boolean = false,
     val showSyncDialog: Boolean = false,
     val selectedEventForNotes: CalendarEvent? = null

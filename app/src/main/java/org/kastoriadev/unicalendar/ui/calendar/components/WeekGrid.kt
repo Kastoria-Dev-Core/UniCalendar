@@ -30,9 +30,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -92,7 +95,8 @@ fun WeekDayColumn(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).uppercase()
+    val locale = LocalConfiguration.current.locales[0]
+    val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale).uppercase()
     val borderColor = when {
         isSelected -> MaterialTheme.colorScheme.primary
         isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
@@ -166,7 +170,7 @@ fun WeekDayColumn(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No lessons",
+                        text = stringResource(R.string.no_lessons),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
@@ -181,7 +185,7 @@ fun WeekDayColumn(
                     }
                     if (events.size > 3) {
                         Text(
-                            text = "+${events.size - 3} more",
+                            text = stringResource(R.string.more_events_format, events.size - 3),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Medium,

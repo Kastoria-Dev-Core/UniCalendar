@@ -14,13 +14,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun WeekHeader(
@@ -30,14 +33,17 @@ fun WeekHeader(
     onTodayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val locale = LocalConfiguration.current.locales[0]
     val weekEnd = weekStart.plusDays(6)
-    val formatter = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
-    val yearFormatter = DateTimeFormatter.ofPattern("yyyy", Locale.getDefault())
 
-    val rangeTitle = if (weekStart.year == weekEnd.year) {
-        "${weekStart.format(formatter)} – ${weekEnd.format(formatter)} ${weekStart.format(yearFormatter)}"
-    } else {
-        "${weekStart.format(formatter)} ${weekStart.format(yearFormatter)} – ${weekEnd.format(formatter)} ${weekEnd.format(yearFormatter)}"
+    val rangeTitle = remember(weekStart, weekEnd, locale) {
+        val formatter = DateTimeFormatter.ofPattern("d MMM", locale)
+        val yearFormatter = DateTimeFormatter.ofPattern("yyyy", locale)
+        if (weekStart.year == weekEnd.year) {
+            "${weekStart.format(formatter)} – ${weekEnd.format(formatter)} ${weekStart.format(yearFormatter)}"
+        } else {
+            "${weekStart.format(formatter)} ${weekStart.format(yearFormatter)} – ${weekEnd.format(formatter)} ${weekEnd.format(yearFormatter)}"
+        }
     }
 
     Row(
@@ -62,20 +68,20 @@ fun WeekHeader(
                 onClick = onTodayClick,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                Text(text = "Today", style = MaterialTheme.typography.labelMedium)
+                Text(text = stringResource(R.string.action_today), style = MaterialTheme.typography.labelMedium)
             }
 
             IconButton(onClick = onPreviousWeek) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Previous week"
+                    contentDescription = stringResource(R.string.action_previous_week)
                 )
             }
 
             IconButton(onClick = onNextWeek) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "Next week"
+                    contentDescription = stringResource(R.string.action_next_week)
                 )
             }
         }

@@ -1,6 +1,7 @@
 package org.kastoriadev.unicalendar.ui.calendar.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,13 +14,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun MonthHeader(
@@ -29,7 +33,10 @@ fun MonthHeader(
     onTodayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val monthTitle = currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault()))
+    val locale = LocalConfiguration.current.locales[0]
+    val monthTitle = remember(currentMonth, locale) {
+        currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", locale))
+    }
 
     Row(
         modifier = modifier
@@ -51,22 +58,22 @@ fun MonthHeader(
         ) {
             FilledTonalButton(
                 onClick = onTodayClick,
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                Text(text = "Today", style = MaterialTheme.typography.labelMedium)
+                Text(text = stringResource(R.string.action_today), style = MaterialTheme.typography.labelMedium)
             }
 
             IconButton(onClick = onPreviousMonth) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Previous month"
+                    contentDescription = stringResource(R.string.action_previous_month)
                 )
             }
 
             IconButton(onClick = onNextMonth) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "Next month"
+                    contentDescription = stringResource(R.string.action_next_month)
                 )
             }
         }

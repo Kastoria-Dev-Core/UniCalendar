@@ -32,8 +32,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
 
 @Composable
 fun SemesterSelectPromptDialog(
@@ -49,15 +51,15 @@ fun SemesterSelectPromptDialog(
     var includePde by remember { mutableStateOf(currentIncludePde) }
 
     val semesters = listOf(
-        "1" to "1ο Εξάμηνο (Semester 1)",
-        "2" to "2ο Εξάμηνο (Semester 2)",
-        "3" to "3ο Εξάμηνο (Semester 3)",
-        "4" to "4ο Εξάμηνο (Semester 4)",
-        "5" to "5ο Εξάμηνο (Semester 5)",
-        "6" to "6ο Εξάμηνο (Semester 6)",
-        "7" to "7ο Εξάμηνο (Semester 7)",
-        "8" to "8ο Εξάμηνο (Semester 8)",
-        "PDE" to "ΠΔΕ (Παιδαγωγική & Διδακτική Επάρκεια)"
+        "1" to stringResource(R.string.semester_format, "1"),
+        "2" to stringResource(R.string.semester_format, "2"),
+        "3" to stringResource(R.string.semester_format, "3"),
+        "4" to stringResource(R.string.semester_format, "4"),
+        "5" to stringResource(R.string.semester_format, "5"),
+        "6" to stringResource(R.string.semester_format, "6"),
+        "7" to stringResource(R.string.semester_format, "7"),
+        "8" to stringResource(R.string.semester_format, "8"),
+        "PDE" to stringResource(R.string.semester_pde)
     )
 
     AlertDialog(
@@ -74,7 +76,7 @@ fun SemesterSelectPromptDialog(
         },
         title = {
             Text(
-                text = "Select Your Semester",
+                text = stringResource(R.string.dialog_select_semester_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -86,7 +88,7 @@ fun SemesterSelectPromptDialog(
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
-                    text = "UniCalendar generates an individual calendar tailored to your semester. You can change your active calendar at any time.",
+                    text = stringResource(R.string.dialog_select_semester_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -143,13 +145,13 @@ fun SemesterSelectPromptDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = "Include ΠΔΕ courses",
+                            text = stringResource(R.string.settings_include_pde),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = if (pdeDisabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Add optional pedagogical module lessons to your schedule",
+                            text = stringResource(R.string.dialog_select_semester_pde_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -163,13 +165,13 @@ fun SemesterSelectPromptDialog(
                     onSemesterConfirmed(selectedSemester, includePde)
                 }
             ) {
-                Text(text = "Confirm Calendar")
+                Text(text = stringResource(R.string.btn_confirm_calendar))
             }
         },
         dismissButton = {
             if (canDismiss) {
                 TextButton(onClick = onDismiss) {
-                    Text(text = "Cancel")
+                    Text(text = stringResource(R.string.btn_cancel))
                 }
             }
         }

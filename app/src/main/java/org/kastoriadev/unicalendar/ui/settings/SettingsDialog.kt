@@ -16,11 +16,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ViewCompact
 import androidx.compose.material3.AlertDialog
@@ -44,8 +46,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
+import org.kastoriadev.unicalendar.domain.model.AppLanguage
 import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
 
@@ -53,15 +58,21 @@ import org.kastoriadev.unicalendar.domain.model.ThemeMode
 fun SettingsDialog(
     themeMode: ThemeMode,
     displayLayoutMode: DisplayLayoutMode,
+    appLanguage: AppLanguage,
     selectedSemester: String?,
     includePde: Boolean,
     onThemeModeChange: (ThemeMode) -> Unit,
     onDisplayLayoutModeChange: (DisplayLayoutMode) -> Unit,
+    onLanguageChange: (AppLanguage) -> Unit,
     onSemesterChange: (semester: String, includePde: Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Appearance", "Semester", "About")
+    val tabs = listOf(
+        stringResource(R.string.tab_appearance),
+        stringResource(R.string.tab_semester),
+        stringResource(R.string.tab_about)
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -75,7 +86,7 @@ fun SettingsDialog(
         },
         title = {
             Text(
-                text = "Settings",
+                text = stringResource(R.string.settings_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -84,7 +95,7 @@ fun SettingsDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(420.dp)
+                    .height(440.dp)
             ) {
                 TabRow(
                     selectedTabIndex = selectedTabIndex,
@@ -124,8 +135,10 @@ fun SettingsDialog(
                         0 -> AppearanceTabContent(
                             currentTheme = themeMode,
                             currentLayout = displayLayoutMode,
+                            currentLanguage = appLanguage,
                             onThemeChange = onThemeModeChange,
-                            onLayoutChange = onDisplayLayoutModeChange
+                            onLayoutChange = onDisplayLayoutModeChange,
+                            onLanguageChange = onLanguageChange
                         )
                         1 -> SemesterTabContent(
                             currentSemester = selectedSemester,
@@ -139,7 +152,7 @@ fun SettingsDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = "Done")
+                Text(text = stringResource(R.string.btn_done))
             }
         }
     )
@@ -149,25 +162,74 @@ fun SettingsDialog(
 private fun AppearanceTabContent(
     currentTheme: ThemeMode,
     currentLayout: DisplayLayoutMode,
+    currentLanguage: AppLanguage,
     onThemeChange: (ThemeMode) -> Unit,
-    onLayoutChange: (DisplayLayoutMode) -> Unit
+    onLayoutChange: (DisplayLayoutMode) -> Unit,
+    onLanguageChange: (AppLanguage) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Language Section
+        Text(
+            text = stringResource(R.string.settings_section_language),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        val languageOptions = listOf(
+            Triple(AppLanguage.SYSTEM, stringResource(R.string.lang_system), Icons.Default.Language),
+            Triple(AppLanguage.ENGLISH, stringResource(R.string.lang_en), Icons.Default.Translate),
+            Triple(AppLanguage.GREEK, stringResource(R.string.lang_el), Icons.Default.Translate)
+        )
+
+        languageOptions.forEach { (lang, label, icon) ->
+            val isSelected = currentLanguage == lang
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onLanguageChange(lang) }
+                    .padding(vertical = 4.dp, horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = isSelected,
+                    onClick = { onLanguageChange(lang) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
         // Theme Section
         Text(
-            text = "App Theme",
+            text = stringResource(R.string.settings_section_theme),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
 
         val themeOptions = listOf(
-            Triple(ThemeMode.SYSTEM, "System Default", Icons.Default.Smartphone),
-            Triple(ThemeMode.LIGHT, "Light Theme", Icons.Default.LightMode),
-            Triple(ThemeMode.DARK, "Dark Theme", Icons.Default.DarkMode)
+            Triple(ThemeMode.SYSTEM, stringResource(R.string.theme_system), Icons.Default.Smartphone),
+            Triple(ThemeMode.LIGHT, stringResource(R.string.theme_light), Icons.Default.LightMode),
+            Triple(ThemeMode.DARK, stringResource(R.string.theme_dark), Icons.Default.DarkMode)
         )
 
         themeOptions.forEach { (mode, label, icon) ->
@@ -205,7 +267,7 @@ private fun AppearanceTabContent(
 
         // Display Layout Mode Section
         Text(
-            text = "Calendar Display Mode",
+            text = stringResource(R.string.settings_section_layout),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -241,12 +303,12 @@ private fun AppearanceTabContent(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = "Split Screen",
+                        text = stringResource(R.string.layout_split),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Calendar takes half screen; lesson notes and details appear right below.",
+                        text = stringResource(R.string.layout_split_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -284,12 +346,12 @@ private fun AppearanceTabContent(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = "Full Screen Calendar",
+                        text = stringResource(R.string.layout_fullscreen),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Calendar takes the full screen; tapping any day opens a tab with its schedule.",
+                        text = stringResource(R.string.layout_fullscreen_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -309,16 +371,16 @@ private fun SemesterTabContent(
     var pdeChecked by remember { mutableStateOf(includePde) }
 
     val semesters = listOf(
-        "ALL" to "All Semesters",
-        "1" to "1ο Εξάμηνο (Semester 1)",
-        "2" to "2ο Εξάμηνο (Semester 2)",
-        "3" to "3ο Εξάμηνο (Semester 3)",
-        "4" to "4ο Εξάμηνο (Semester 4)",
-        "5" to "5ο Εξάμηνο (Semester 5)",
-        "6" to "6ο Εξάμηνο (Semester 6)",
-        "7" to "7ο Εξάμηνο (Semester 7)",
-        "8" to "8ο Εξάμηνο (Semester 8)",
-        "PDE" to "ΠΔΕ (Παιδαγωγική Επάρκεια)"
+        "ALL" to stringResource(R.string.semester_all),
+        "1" to stringResource(R.string.semester_format, "1"),
+        "2" to stringResource(R.string.semester_format, "2"),
+        "3" to stringResource(R.string.semester_format, "3"),
+        "4" to stringResource(R.string.semester_format, "4"),
+        "5" to stringResource(R.string.semester_format, "5"),
+        "6" to stringResource(R.string.semester_format, "6"),
+        "7" to stringResource(R.string.semester_format, "7"),
+        "8" to stringResource(R.string.semester_format, "8"),
+        "PDE" to stringResource(R.string.semester_pde)
     )
 
     Column(
@@ -326,7 +388,7 @@ private fun SemesterTabContent(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = "Active Academic Semester",
+            text = stringResource(R.string.settings_active_semester),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -385,12 +447,12 @@ private fun SemesterTabContent(
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(
-                    text = "Include ΠΔΕ courses",
+                    text = stringResource(R.string.settings_include_pde),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = "Add pedagogical module classes to your calendar",
+                    text = stringResource(R.string.settings_include_pde_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -408,12 +470,12 @@ private fun AboutTabContent() {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "UniCalendar",
+            text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "Department of Informatics, University of Western Macedonia (Kastoria)",
+            text = stringResource(R.string.about_dept),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -421,13 +483,13 @@ private fun AboutTabContent() {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
         Text(
-            text = "Automated Synchronization",
+            text = stringResource(R.string.about_sync_title),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "Timetables are regularly parsed and updated directly via automated GitHub repository actions.",
+            text = stringResource(R.string.about_sync_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -435,12 +497,12 @@ private fun AboutTabContent() {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
         Text(
-            text = "Version 1.0.0",
+            text = stringResource(R.string.about_version, "1.0.0"),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline
         )
         Text(
-            text = "Developed by KastoriaDevCore",
+            text = stringResource(R.string.about_dev),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline
         )

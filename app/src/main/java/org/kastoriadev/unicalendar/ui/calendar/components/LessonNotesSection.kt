@@ -28,16 +28,19 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun LessonNotesSection(
@@ -47,7 +50,10 @@ fun LessonNotesSection(
     onDeleteEvent: (CalendarEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault())
+    val locale = LocalConfiguration.current.locales[0]
+    val formatter = remember(locale) {
+        DateTimeFormatter.ofPattern("EEEE, d MMMM", locale)
+    }
 
     Column(
         modifier = modifier
@@ -60,14 +66,14 @@ fun LessonNotesSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Notes for ${selectedDate.format(formatter)}",
+                text = stringResource(R.string.notes_for_date, selectedDate.format(formatter)),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
-                text = "${events.size} ${if (events.size == 1) "lesson" else "lessons"}",
+                text = if (events.size == 1) stringResource(R.string.lessons_count_single) else stringResource(R.string.lessons_count_multiple, events.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -83,7 +89,7 @@ fun LessonNotesSection(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No lessons scheduled for this day",
+                    text = stringResource(R.string.no_lessons),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -159,7 +165,7 @@ fun LessonNoteCard(
                             onClick = {},
                             label = {
                                 Text(
-                                    text = event.type.name,
+                                    text = stringResource(event.type.displayNameRes),
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             },
@@ -183,7 +189,7 @@ fun LessonNoteCard(
                 IconButton(onClick = onEditClick) {
                     Icon(
                         imageVector = Icons.Default.EditNote,
-                        contentDescription = "Edit notes",
+                        contentDescription = stringResource(R.string.btn_edit),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -191,7 +197,7 @@ fun LessonNoteCard(
                 IconButton(onClick = onDeleteClick) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete event",
+                        contentDescription = stringResource(R.string.btn_delete),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -231,7 +237,7 @@ fun LessonNoteCard(
                 if (event.notes.isNotBlank()) {
                     Column {
                         Text(
-                            text = "Notes:",
+                            text = stringResource(R.string.field_personal_notes),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -255,7 +261,7 @@ fun LessonNoteCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "Tap to add personal notes, tasks, or exam topics...",
+                            text = stringResource(R.string.notes_empty_placeholder_week),
                             style = MaterialTheme.typography.bodySmall,
                             fontStyle = FontStyle.Italic,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -2,6 +2,7 @@ package org.kastoriadev.unicalendar.data.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import org.kastoriadev.unicalendar.domain.model.AppLanguage
 import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
 
@@ -53,6 +54,19 @@ class UserPreferences(context: Context) {
             prefs.edit().putString(KEY_DISPLAY_LAYOUT_MODE, value.name).apply()
         }
 
+    var appLanguage: AppLanguage
+        get() {
+            val name = prefs.getString(KEY_APP_LANGUAGE, AppLanguage.SYSTEM.name) ?: AppLanguage.SYSTEM.name
+            return try {
+                AppLanguage.valueOf(name)
+            } catch (e: Exception) {
+                AppLanguage.SYSTEM
+            }
+        }
+        set(value) {
+            prefs.edit().putString(KEY_APP_LANGUAGE, value.name).apply()
+        }
+
     companion object {
         private const val PREFS_NAME = "unicalendar_user_prefs"
         private const val KEY_SELECTED_SEMESTER = "key_selected_semester"
@@ -60,5 +74,6 @@ class UserPreferences(context: Context) {
         private const val KEY_HAS_COMPLETED_ONBOARDING = "key_has_completed_onboarding"
         private const val KEY_THEME_MODE = "key_theme_mode"
         private const val KEY_DISPLAY_LAYOUT_MODE = "key_display_layout_mode"
+        private const val KEY_APP_LANGUAGE = "key_app_language"
     }
 }

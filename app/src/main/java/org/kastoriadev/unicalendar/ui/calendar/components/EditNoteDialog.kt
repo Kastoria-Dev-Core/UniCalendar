@@ -15,7 +15,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 
 @Composable
@@ -30,7 +32,7 @@ fun EditNoteDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Notes for ${event.title}",
+                text = stringResource(R.string.dialog_note_title, event.title),
                 style = MaterialTheme.typography.titleMedium
             )
         },
@@ -40,7 +42,7 @@ fun EditNoteDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "Add homework, exam topics, professor instructions, or study reminders.",
+                    text = stringResource(R.string.dialog_note_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -48,8 +50,8 @@ fun EditNoteDialog(
                 OutlinedTextField(
                     value = notesText,
                     onValueChange = { notesText = it },
-                    label = { Text("Lesson Notes") },
-                    placeholder = { Text("e.g. Chapter 4 exercises due next Monday...") },
+                    label = { Text(stringResource(R.string.field_lesson_notes)) },
+                    placeholder = { Text(stringResource(R.string.hint_lesson_notes)) },
                     minLines = 4,
                     maxLines = 8,
                     modifier = Modifier.fillMaxWidth()
@@ -63,12 +65,12 @@ fun EditNoteDialog(
                     onDismiss()
                 }
             ) {
-                Text("Save")
+                Text(stringResource(R.string.btn_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.btn_cancel))
             }
         }
     )
