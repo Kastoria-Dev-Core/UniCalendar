@@ -18,7 +18,18 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: CalendarViewModel by viewModels {
         val app = application as UniCalendarApp
-        CalendarViewModel.Factory(app.eventRepository, app.syncManager)
+        CalendarViewModel.Factory(
+            repository = app.eventRepository,
+            syncManager = app.syncManager,
+            userPreferences = app.userPreferences,
+            defaultTimetableStreamProvider = {
+                try {
+                    assets.open("default_timetable.docx")
+                } catch (e: Exception) {
+                    null
+                }
+            }
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +43,9 @@ class MainActivity : ComponentActivity() {
                     uiState = uiState,
                     onViewModeChange = viewModel::setViewMode,
                     onSemesterFilterChange = viewModel::setSemesterFilter,
+                    onOpenSemesterPrompt = viewModel::openSemesterPrompt,
+                    onDismissSemesterPrompt = viewModel::dismissSemesterPrompt,
+                    onSemesterConfirmed = viewModel::onSemesterConfirmed,
                     onDateSelected = viewModel::onDateSelected,
                     onPreviousMonth = viewModel::onPreviousMonth,
                     onNextMonth = viewModel::onNextMonth,

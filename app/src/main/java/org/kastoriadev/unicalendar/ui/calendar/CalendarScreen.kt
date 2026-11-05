@@ -1,18 +1,23 @@
 package org.kastoriadev.unicalendar.ui.calendar
 
 import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarViewWeek
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -32,6 +37,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,6 +51,7 @@ import org.kastoriadev.unicalendar.ui.calendar.components.LessonNotesSection
 import org.kastoriadev.unicalendar.ui.calendar.components.MonthGrid
 import org.kastoriadev.unicalendar.ui.calendar.components.MonthHeader
 import org.kastoriadev.unicalendar.ui.calendar.components.SemesterFilterRow
+import org.kastoriadev.unicalendar.ui.calendar.components.SemesterSelectPromptDialog
 import org.kastoriadev.unicalendar.ui.calendar.components.SyncScheduleDialog
 import org.kastoriadev.unicalendar.ui.calendar.components.WeekGrid
 import org.kastoriadev.unicalendar.ui.calendar.components.WeekHeader
@@ -57,6 +64,9 @@ fun CalendarScreen(
     uiState: CalendarUiState,
     onViewModeChange: (CalendarViewMode) -> Unit,
     onSemesterFilterChange: (String?) -> Unit,
+    onOpenSemesterPrompt: () -> Unit,
+    onDismissSemesterPrompt: () -> Unit,
+    onSemesterConfirmed: (semester: String, includePde: Boolean) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
@@ -97,18 +107,32 @@ fun CalendarScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "UniCalendar",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    Column(
+                        modifier = Modifier.clickable { onOpenSemesterPrompt() }
+                    ) {
+                        Text(
+                            text = "UniCalendar",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        val semLabel = when (uiState.selectedSemester) {
+                            null, "ALL" -> "All Semesters"
+                            "PDE" -> "ΠΔΕ (Pedagogical Module)"
+                            else -> "Semester ${uiState.selectedSemester}" + if (uiState.includePde) " (+ ΠΔΕ)" else ""
+                        }
+                        Text(
+                            text = "Active: $semLabel ▾",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 },
                 actions = {
                     // View Switcher (Week / Month)
                     SingleChoiceSegmentedButtonRow(
                         modifier = Modifier
                             .height(36.dp)
-                            .padding(end = 8.dp)
+                            .padding(end = 4.dp)
                     ) {
                         SegmentedButton(
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
@@ -139,6 +163,14 @@ fun CalendarScreen(
                         ) {
                             Text(text = "Month", style = MaterialTheme.typography.labelSmall)
                         }
+                    }
+
+                    // Semester Selector Dialog Trigger
+                    IconButton(onClick = onOpenSemesterPrompt) {
+                        Icon(
+                            imageVector = Icons.Default.School,
+                            contentDescription = "Select active semester"
+                        )
                     }
 
                     if (uiState.isSyncing) {
@@ -185,7 +217,7 @@ fun CalendarScreen(
         ) {
             // Semester Filter Row (+ PDE)
             SemesterFilterRow(
-                selectedSemester = uiState.selectedSemesterFilter,
+                selectedSemester = uiState.selectedSemester,
                 onSemesterSelected = onSemesterFilterChange
             )
 
@@ -261,6 +293,16 @@ fun CalendarScreen(
                     )
                 }
             }
+        }
+
+        if (uiState.showSemesterPrompt) {
+            SemesterSelectPromptDialog(
+                currentSemester = uiState.selectedSemester,
+                currentIncludePde = uiState.includePde,
+                canDismiss = uiState.canDismissSemesterPrompt,
+                onDismiss = onDismissSemesterPrompt,
+                onSemesterConfirmed = onSemesterConfirmed
+            )
         }
 
         if (uiState.showAddDialog) {

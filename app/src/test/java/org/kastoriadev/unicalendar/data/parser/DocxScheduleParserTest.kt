@@ -5,6 +5,8 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.kastoriadev.unicalendar.domain.model.EventType
+import java.io.File
+import java.io.FileInputStream
 import java.time.DayOfWeek
 
 class DocxScheduleParserTest {
@@ -76,5 +78,73 @@ class DocxScheduleParserTest {
         assertEquals(DayOfWeek.FRIDAY, firstPde.startTime.dayOfWeek)
         assertEquals("PDE", firstPde.semester)
         assertEquals("Αμφιθέατρο", firstPde.location)
+    }
+
+    @Test
+    fun parseRealTimetableDocx_identifiesSemestersAndCoursesCorrectly() {
+        val file = File("Timetable_ΧE_2026-2027_V1.2-1.docx")
+        if (!file.exists()) return // Skip if file is moved
+
+        val events = FileInputStream(file).use { stream ->
+            parser.parseStream(stream, file.name)
+        }
+
+        assertTrue("Events must not be empty", events.isNotEmpty())
+
+        val semesters = events.map { it.semester }.distinct()
+        assertTrue("Must contain Semester 1", semesters.contains("1"))
+        assertTrue("Must contain Semester 3", semesters.contains("3"))
+        assertTrue("Must contain Semester 5", semesters.contains("5"))
+        assertTrue("Must contain Semester 7", semesters.contains("7"))
+        assertTrue("Must contain Semester PDE", semesters.contains("PDE"))
+
+        // Verify Semester 1 lessons
+        val sem1Events = events.filter { it.semester == "1" }
+        val titles1 = sem1Events.map { it.title }.distinct()
+        assertTrue("Sem 1 has Ηλεκτρονική", titles1.any { it.contains("Ηλεκτρονική") })
+        assertTrue("Sem 1 has Εισαγωγή στους Υπολογιστές", titles1.any { it.contains("Εισαγωγή στους Υπολογιστές") })
+        assertTrue("Sem 1 has Φυσική", titles1.any { it.contains("Φυσική") })
+        assertTrue("Sem 1 has Μαθηματική Ανάλυση Ι", titles1.any { it.contains("Μαθηματική Ανάλυση Ι") })
+        assertTrue("Sem 1 has Διακριτά Μαθηματικά", titles1.any { it.contains("Διακριτά Μαθηματικά") })
+
+        // Check time span and instructor for Sem 1 Ηλεκτρονική (Tue 09:00 - 11:00)
+        val hlektroniki = sem1Events.first { it.title.contains("Ηλεκτρονική") && it.startTime.dayOfWeek == DayOfWeek.TUESDAY }
+        assertEquals(9, hlektroniki.startTime.hour)
+        assertEquals(11, hlektroniki.endTime.hour)
+        assertTrue(hlektroniki.description.contains("Φωτιάδης"))
+        assertTrue(hlektroniki.location.contains("Αμφιθέατρο"))
+
+        // Verify Semester 3
+        val sem3Events = events.filter { it.semester == "3" }
+        val titles3 = sem3Events.map { it.title }.distinct()
+        assertTrue("Sem 3 has Μεταγλωττιστές", titles3.any { it.contains("Μεταγλωττιστές") })
+        assertTrue("Sem 3 has Αριθμητική Ανάλυση", titles3.any { it.contains("Αριθμητική Ανάλυση") })
+        assertTrue("Sem 3 has Προγραμματισμός στο Διαδίκτυο", titles3.any { it.contains("Προγραμματισμός στο Διαδίκτυο") })
+
+        // Verify Semester 5
+        val sem5Events = events.filter { it.semester == "5" }
+        val titles5 = sem5Events.map { it.title }.distinct()
+        assertTrue("Sem 5 has Κατανεμημένα Συστήματα", titles5.any { it.contains("Κατανεμημένα Συστήματα") })
+        assertTrue("Sem 5 has Τεχνολογία Λογισμικού", titles5.any { it.contains("Τεχνολογία Λογισμικού") })
+
+        // Verify Semester 7
+        val sem7Events = events.filter { it.semester == "7" }
+        val titles7 = sem7Events.map { it.title }.distinct()
+        assertTrue("Sem 7 has Αλγόριθμοι Μηχανικής Μάθησης", titles7.any { it.contains("Αλγόριθμοι Μηχανικής Μάθησης") })
+        assertTrue("Sem 7 has Ασφάλεια Δικτύων", titles7.any { it.contains("Ασφάλεια Δικτύων") })
+
+        // Verify PDE (Pedagogical Certification)
+        val pdeEvents = events.filter { it.semester == "PDE" }
+        val titlesPde = pdeEvents.map { it.title }.distinct()
+        assertTrue("PDE has Ανάπτυξη Ψηφιακού Υλικού", titlesPde.any { it.contains("Ανάπτυξη Ψηφιακού Υλικού") })
+        assertTrue("PDE has Εισαγωγή στην Παιδαγωγική", titlesPde.any { it.contains("Εισαγωγή στην Παιδαγωγική") })
+        assertTrue("PDE has Διδακτική Μεθοδολογία", titlesPde.any { it.contains("Διδακτική Μεθοδολογία") })
+
+        // Check 3-hour duration of Thursday PDE class (13:00 - 16:00)
+        val pdeThu = pdeEvents.first { it.startTime.dayOfWeek == DayOfWeek.THURSDAY }
+        assertEquals(13, pdeThu.startTime.hour)
+        assertEquals(16, pdeThu.endTime.hour)
+        assertTrue(pdeThu.description.contains("Πέλλας"))
+        assertEquals("Β1", pdeThu.location)
     }
 }

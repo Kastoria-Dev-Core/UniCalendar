@@ -8,7 +8,10 @@ import java.time.temporal.TemporalAdjusters
 
 data class CalendarUiState(
     val viewMode: CalendarViewMode = CalendarViewMode.MONTH,
-    val selectedSemesterFilter: String? = null, // null means "ALL", otherwise "1", "3", "5", "7", "PDE"
+    val selectedSemester: String? = null, // e.g. "1", "2", "3", "4", "5", "6", "7", "8", "PDE", "ALL"
+    val includePde: Boolean = false,
+    val showSemesterPrompt: Boolean = false,
+    val canDismissSemesterPrompt: Boolean = true,
     val currentMonth: YearMonth = YearMonth.now(),
     val currentWeekStart: LocalDate = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
     val selectedDate: LocalDate = LocalDate.now(),
