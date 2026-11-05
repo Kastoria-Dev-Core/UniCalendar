@@ -9,15 +9,20 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Card
@@ -42,7 +47,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
-import java.util.Locale
 
 @Composable
 fun WeekGrid(
@@ -50,7 +54,8 @@ fun WeekGrid(
     selectedDate: LocalDate,
     eventsMap: Map<LocalDate, List<CalendarEvent>>,
     onDateClick: (LocalDate) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isFullScreen: Boolean = false
 ) {
     val today = LocalDate.now()
     val weekDays = calculateWeekDays(weekStart)
@@ -80,19 +85,21 @@ fun WeekGrid(
                 isSelected = isSelected,
                 isToday = isToday,
                 events = dayEvents,
-                onClick = { onDateClick(date) }
+                onClick = { onDateClick(date) },
+                isFullScreen = isFullScreen
             )
         }
     }
 }
 
 @Composable
-fun WeekDayColumn(
+fun LazyItemScope.WeekDayColumn(
     date: LocalDate,
     isSelected: Boolean,
     isToday: Boolean,
     events: List<CalendarEvent>,
     onClick: () -> Unit,
+    isFullScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
     val locale = LocalConfiguration.current.locales[0]
@@ -109,10 +116,18 @@ fun WeekDayColumn(
         else -> MaterialTheme.colorScheme.surface
     }
 
-    Card(
-        modifier = modifier
+    val cardModifier = if (isFullScreen) {
+        modifier
+            .fillParentMaxHeight()
+            .width(185.dp)
+    } else {
+        modifier
             .width(148.dp)
             .height(260.dp)
+    }
+
+    Card(
+        modifier = cardModifier
             .border(
                 width = if (isSelected) 2.dp else 1.dp,
                 color = borderColor,
@@ -126,7 +141,7 @@ fun WeekDayColumn(
         Column(
             modifier = Modifier
                 .padding(8.dp)
-                .fillMaxWidth()
+                .fillMaxSize()
         ) {
             // Header: Day Name and Date Number
             Row(
@@ -176,21 +191,37 @@ fun WeekDayColumn(
                     )
                 }
             } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    for (event in events.take(3)) {
-                        WeekLessonBadge(event = event)
+                if (isFullScreen) {
+                    // Full Screen Mode: display all lessons in a scrollable list filling full card height
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        for (event in events) {
+                            WeekLessonBadge(event = event, isFullScreen = true)
+                        }
                     }
-                    if (events.size > 3) {
-                        Text(
-                            text = stringResource(R.string.more_events_format, events.size - 3),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(start = 4.dp)
-                        )
+                } else {
+                    // Split Screen Mode: display top 3 badges + more counter
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        for (event in events.take(3)) {
+                            WeekLessonBadge(event = event, isFullScreen = false)
+                        }
+                        if (events.size > 3) {
+                            Text(
+                                text = stringResource(R.string.more_events_format, events.size - 3),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -201,6 +232,7 @@ fun WeekDayColumn(
 @Composable
 fun WeekLessonBadge(
     event: CalendarEvent,
+    isFullScreen: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -228,7 +260,7 @@ fun WeekLessonBadge(
                 text = event.title,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
+                maxLines = if (isFullScreen) 3 else 2,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface
             )

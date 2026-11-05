@@ -57,7 +57,6 @@ import org.kastoriadev.unicalendar.ui.calendar.components.SemesterSelectPromptDi
 import org.kastoriadev.unicalendar.ui.calendar.components.SyncScheduleDialog
 import org.kastoriadev.unicalendar.ui.calendar.components.WeekGrid
 import org.kastoriadev.unicalendar.ui.calendar.components.WeekHeader
-import org.kastoriadev.unicalendar.ui.settings.SettingsDialog
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -288,7 +287,10 @@ fun CalendarScreen(
                             selectedDate = uiState.selectedDate,
                             eventsMap = uiState.monthEvents,
                             onDateClick = onDateSelected,
-                            modifier = Modifier.weight(1f)
+                            isFullScreen = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
                         )
                     } else {
                         // Split Screen: week schedule on top, lesson notes below
@@ -327,22 +329,6 @@ fun CalendarScreen(
                 onEditNoteClick = onEditNoteClick,
                 onDeleteEvent = onDeleteEvent,
                 onDismiss = onDismissDayDetailsSheet
-            )
-        }
-
-        // Settings Dialog
-        if (uiState.showSettingsDialog) {
-            SettingsDialog(
-                themeMode = uiState.themeMode,
-                displayLayoutMode = uiState.displayLayoutMode,
-                appLanguage = uiState.appLanguage,
-                selectedSemester = uiState.selectedSemester,
-                includePde = uiState.includePde,
-                onThemeModeChange = onThemeModeChange,
-                onDisplayLayoutModeChange = onDisplayLayoutModeChange,
-                onLanguageChange = onLanguageChange,
-                onSemesterChange = onSemesterConfirmed,
-                onDismiss = onDismissSettings
             )
         }
 

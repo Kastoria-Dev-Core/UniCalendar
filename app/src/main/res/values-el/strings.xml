@@ -19,16 +19,15 @@
     <string name="btn_edit">Επεξεργασία</string>
     <string name="btn_done">Τέλος</string>
     <string name="btn_close">Κλείσιμο</string>
+    <string name="btn_back">Πίσω</string>
     <string name="btn_confirm_calendar">Επιβεβαίωση Προγράμματος</string>
 
-    <!-- Settings Dialog -->
+    <!-- Settings Screen -->
     <string name="settings_title">Ρυθμίσεις</string>
     <string name="tab_appearance">Εμφάνιση</string>
-    <string name="tab_semester">Εξάμηνο</string>
-    <string name="tab_about">Σχετικά</string>
+    <string name="tab_about">Σχετικά &amp; Συντελεστές</string>
 
     <string name="settings_section_theme">Θέμα Εφαρμογής</string>
-    <string name="theme_system">Προεπιλογή συστήματος</string>
     <string name="theme_light">Φωτεινό θέμα</string>
     <string name="theme_dark">Σκοτεινό θέμα</string>
 
@@ -38,20 +37,28 @@
     <string name="layout_fullscreen">Πλήρης οθόνη</string>
     <string name="layout_fullscreen_desc">Το ημερολόγιο καταλαμβάνει όλη την οθόνη. Πατώντας σε μια ημέρα ανοίγουν οι λεπτομέρειες.</string>
 
-    <string name="settings_section_language">Γλώσσα / Language</string>
-    <string name="lang_system">Προεπιλογή συστήματος (Default)</string>
-    <string name="lang_en">English (Αγγλικά)</string>
-    <string name="lang_el">Ελληνικά (Greek)</string>
+    <string name="settings_section_language">Γλώσσα</string>
+    <string name="lang_en">English</string>
+    <string name="lang_el">Ελληνικά</string>
 
-    <string name="settings_active_semester">Ενεργό Ακαδημαϊκό Εξάμηνο</string>
-    <string name="settings_include_pde">Συμπερίληψη μαθημάτων ΠΔΕ</string>
-    <string name="settings_include_pde_desc">Προσθήκη μαθημάτων Παιδαγωγικής Επάρκειας στο ημερολόγιό σας</string>
+    <!-- Data Management & Reset -->
+    <string name="settings_section_data">Διαχείριση Προγραμμάτων</string>
+    <string name="btn_clear_all_schedules">Διαγραφή Όλων των Προγραμμάτων</string>
+    <string name="desc_clear_all_schedules">Διαγράφει όλα τα εισαγόμενα προγράμματα, μαθήματα και σημειώσεις επαναφέροντας το ημερολόγιο σε κενή κατάσταση.</string>
+    <string name="dialog_clear_all_title">Διαγραφή Όλων των Προγραμμάτων;</string>
+    <string name="dialog_clear_all_desc">Είστε βέβαιοι ότι θέλετε να διαγράψετε όλα τα προγράμματα και μαθήματα; Αυτή η ενέργεια επαναφέρει το ημερολόγιο σε εντελώς κενή κατάσταση και δεν μπορεί να αναιρεθεί.</string>
+    <string name="btn_clear_confirm">Διαγραφή Όλων</string>
+    <string name="msg_schedules_cleared">Όλα τα προγράμματα διαγράφηκαν επιτυχώς</string>
 
-    <string name="about_dept">Τμήμα Πληροφορικής, Πανεπιστήμιο Δυτικής Μακεδονίας (Καστοριά)</string>
-    <string name="about_sync_title">Αυτόματος Συγχρονισμός</string>
-    <string name="about_sync_desc">Τα ωρολόγια προγράμματα αναλύονται και ενημερώνονται αυτόματα μέσω GitHub Actions.</string>
+    <!-- About & Attributions -->
     <string name="about_version">Έκδοση %1$s</string>
-    <string name="about_dev">Αναπτύχθηκε από την KastoriaDevCore</string>
+    <string name="about_built_by">Αναπτύχθηκε από τον Gio &amp; την KastoriaDevCore</string>
+    <string name="about_org_desc">Η KastoriaDevCore είναι μια ανεξάρτητη φοιτητική κοινότητα ανάπτυξης ψηφιακών εργαλείων ανοιχτού κώδικα.</string>
+    <string name="about_github_label">Πηγαίος Κώδικας στο GitHub</string>
+    <string name="about_disclaimer_title">Αποποίηση Ευθύνης</string>
+    <string name="about_disclaimer_desc">Το UniCalendar είναι μια ανεξάρτητη φοιτητική εφαρμογή ανοιχτού κώδικα. ΔΕΝ αποτελεί επίσημη εφαρμογή και ΔΕΝ συνδέεται, υποστηρίζεται ή εκπροσωπεί το Πανεπιστήμιο Δυτικής Μακεδονίας (ΠΔΜ) ή το Τμήμα Πληροφορικής.</string>
+    <string name="about_libraries_title">Συντελεστές &amp; Βιβλιοθήκες Ανοιχτού Κώδικα</string>
+    <string name="about_libraries_desc">Το UniCalendar αναπτύχθηκε με τη χρήση βιβλιοθηκών ανοιχτού κώδικα: Jetpack Compose, Material 3, Room Database, Kotlin Coroutines, OkHttp και Jsoup.</string>
 
     <!-- Semester Filtering & Selection -->
     <string name="semester_all">Όλα τα Εξάμηνα</string>
@@ -66,6 +73,7 @@
     <string name="dialog_select_semester_title">Επιλέξτε το Εξάμηνό σας</string>
     <string name="dialog_select_semester_desc">Το UniCalendar δημιουργεί εξατομικευμένο πρόγραμμα για το εξάμηνό σας. Μπορείτε να το αλλάξετε ανά πάσα στιγμή από τις ρυθμίσεις.</string>
     <string name="dialog_select_semester_pde_desc">Προσθήκη μαθημάτων παιδαγωγικής ενότητας στο πρόγραμμά σας</string>
+    <string name="settings_include_pde">Συμπερίληψη μαθημάτων ΠΔΕ</string>
 
     <!-- Sync Schedule Dialog -->
     <string name="dialog_sync_title">Συγχρονισμός Προγράμματος</string>

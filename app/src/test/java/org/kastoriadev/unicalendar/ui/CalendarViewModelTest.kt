@@ -46,6 +46,9 @@ class CalendarViewModelTest {
         override suspend fun deleteEventById(id: Long) {}
         override suspend fun clearSyncedEvents() {}
         override suspend fun clearSyncedEventsBySemester(semester: String?) {}
+        override suspend fun clearAllEvents() {
+            eventsFlow.value = emptyList()
+        }
     }
 
     @Before
@@ -157,14 +160,14 @@ class CalendarViewModelTest {
         val syncManager = ScheduleSyncManager(repo)
         val viewModel = CalendarViewModel(repo, syncManager)
 
-        // Default layout is SPLIT, theme is SYSTEM
+        // Default layout is SPLIT, theme is LIGHT
         assertEquals(DisplayLayoutMode.SPLIT, viewModel.uiState.value.displayLayoutMode)
-        assertEquals(ThemeMode.SYSTEM, viewModel.uiState.value.themeMode)
-        assertFalse(viewModel.uiState.value.showSettingsDialog)
+        assertEquals(ThemeMode.LIGHT, viewModel.uiState.value.themeMode)
+        assertFalse(viewModel.uiState.value.showSettingsScreen)
 
         // Open settings
-        viewModel.openSettingsDialog()
-        assertTrue(viewModel.uiState.value.showSettingsDialog)
+        viewModel.openSettings()
+        assertTrue(viewModel.uiState.value.showSettingsScreen)
 
         // Change theme to DARK
         viewModel.setThemeMode(ThemeMode.DARK)
@@ -189,8 +192,8 @@ class CalendarViewModelTest {
         assertFalse(viewModel.uiState.value.showDayDetailsSheet)
 
         // Close settings
-        viewModel.dismissSettingsDialog()
-        assertFalse(viewModel.uiState.value.showSettingsDialog)
+        viewModel.dismissSettings()
+        assertFalse(viewModel.uiState.value.showSettingsScreen)
     }
 
     @Test
@@ -199,12 +202,46 @@ class CalendarViewModelTest {
         val syncManager = ScheduleSyncManager(repo)
         val viewModel = CalendarViewModel(repo, syncManager)
 
-        assertEquals(AppLanguage.SYSTEM, viewModel.uiState.value.appLanguage)
-
-        viewModel.setAppLanguage(AppLanguage.GREEK)
         assertEquals(AppLanguage.GREEK, viewModel.uiState.value.appLanguage)
 
         viewModel.setAppLanguage(AppLanguage.ENGLISH)
         assertEquals(AppLanguage.ENGLISH, viewModel.uiState.value.appLanguage)
+
+        viewModel.setAppLanguage(AppLanguage.GREEK)
+        assertEquals(AppLanguage.GREEK, viewModel.uiState.value.appLanguage)
+    }
+
+    @Test
+    fun clearAllSchedules_wipesAllEventsAndSelectedSemester() = runTest {
+        val repo = FakeEventRepository()
+        val syncManager = ScheduleSyncManager(repo)
+        val targetDate = LocalDate.of(2026, 11, 3)
+
+        val sampleEvents = listOf(
+            CalendarEvent(
+                id = 1,
+                title = "Ηλεκτρονική",
+                semester = "1",
+                startTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(9, 0)),
+                endTime = LocalDateTime.of(targetDate, java.time.LocalTime.of(11, 0))
+            )
+        )
+        repo.eventsFlow.value = sampleEvents
+
+        val viewModel = CalendarViewModel(repo, syncManager)
+        advanceUntilIdle()
+
+        viewModel.setSemesterFilter("1")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.allEvents.size)
+        assertEquals("1", viewModel.uiState.value.selectedSemester)
+
+        viewModel.clearAllSchedules()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.allEvents.isEmpty())
+        assertTrue(viewModel.uiState.value.monthEvents.isEmpty())
+        assertTrue(viewModel.uiState.value.selectedDateEvents.isEmpty())
+        assertEquals(null, viewModel.uiState.value.selectedSemester)
     }
 }

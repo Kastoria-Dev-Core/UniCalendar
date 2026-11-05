@@ -35,9 +35,9 @@ class CalendarViewModel(
 
     private val _uiState = MutableStateFlow(
         CalendarUiState(
-            themeMode = userPreferences?.themeMode ?: ThemeMode.SYSTEM,
+            themeMode = userPreferences?.themeMode ?: ThemeMode.LIGHT,
             displayLayoutMode = userPreferences?.displayLayoutMode ?: DisplayLayoutMode.SPLIT,
-            appLanguage = userPreferences?.appLanguage ?: AppLanguage.SYSTEM,
+            appLanguage = userPreferences?.appLanguage ?: AppLanguage.GREEK,
             selectedSemester = userPreferences?.selectedSemester,
             includePde = userPreferences?.includePde ?: false,
             showSemesterPrompt = userPreferences?.let { !it.hasCompletedOnboarding } ?: false,
@@ -87,12 +87,31 @@ class CalendarViewModel(
         _uiState.update { it.copy(displayLayoutMode = mode) }
     }
 
-    fun openSettingsDialog() {
-        _uiState.update { it.copy(showSettingsDialog = true) }
+    fun openSettings() {
+        _uiState.update { it.copy(showSettingsScreen = true) }
     }
 
-    fun dismissSettingsDialog() {
-        _uiState.update { it.copy(showSettingsDialog = false) }
+    fun dismissSettings() {
+        _uiState.update { it.copy(showSettingsScreen = false) }
+    }
+
+    fun openSettingsDialog() = openSettings()
+    fun dismissSettingsDialog() = dismissSettings()
+
+    fun clearAllSchedules() {
+        viewModelScope.launch {
+            repository.clearAllEvents()
+            userPreferences?.selectedSemester = null
+            _uiState.update { current ->
+                current.copy(
+                    selectedSemester = null,
+                    allEvents = emptyList(),
+                    monthEvents = emptyMap(),
+                    selectedDateEvents = emptyList(),
+                    syncMessage = UiText.StringResource(R.string.msg_schedules_cleared)
+                )
+            }
+        }
     }
 
     fun openDayDetailsSheet() {

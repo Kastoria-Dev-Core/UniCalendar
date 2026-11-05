@@ -30,11 +30,12 @@ class UserPreferences(context: Context) {
 
     var themeMode: ThemeMode
         get() {
-            val name = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
+            val name = prefs.getString(KEY_THEME_MODE, ThemeMode.LIGHT.name) ?: ThemeMode.LIGHT.name
             return try {
-                ThemeMode.valueOf(name)
+                val mode = ThemeMode.valueOf(name)
+                if (mode == ThemeMode.SYSTEM) ThemeMode.LIGHT else mode
             } catch (e: Exception) {
-                ThemeMode.SYSTEM
+                ThemeMode.LIGHT
             }
         }
         set(value) {
@@ -56,11 +57,12 @@ class UserPreferences(context: Context) {
 
     var appLanguage: AppLanguage
         get() {
-            val name = prefs.getString(KEY_APP_LANGUAGE, AppLanguage.SYSTEM.name) ?: AppLanguage.SYSTEM.name
+            val name = prefs.getString(KEY_APP_LANGUAGE, AppLanguage.GREEK.name) ?: AppLanguage.GREEK.name
             return try {
-                AppLanguage.valueOf(name)
+                val lang = AppLanguage.valueOf(name)
+                if (lang == AppLanguage.SYSTEM) AppLanguage.GREEK else lang
             } catch (e: Exception) {
-                AppLanguage.SYSTEM
+                AppLanguage.GREEK
             }
         }
         set(value) {

@@ -80,6 +80,10 @@ class EventRepositoryImpl(
         dao.clearSyncedEventsBySemester(semester)
     }
 
+    override suspend fun clearAllEvents() {
+        dao.clearAllEvents()
+    }
+
     private fun EventEntity.toDomain(): CalendarEvent = CalendarEvent(
         id = id,
         title = title,
