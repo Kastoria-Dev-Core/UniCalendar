@@ -8,17 +8,27 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.delay
 import org.kastoriadev.unicalendar.UniCalendarApp
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.ui.calendar.CalendarScreen
 import org.kastoriadev.unicalendar.ui.calendar.CalendarViewModel
+import org.kastoriadev.unicalendar.ui.common.StartupLoadingScreen
 import org.kastoriadev.unicalendar.ui.settings.SettingsScreen
 import org.kastoriadev.unicalendar.ui.theme.UniCalendarTheme
 import org.kastoriadev.unicalendar.util.LocaleHelper
@@ -50,55 +60,74 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
             }
 
+            var isInitialLoading by remember { mutableStateOf(true) }
+
+            LaunchedEffect(Unit) {
+                delay(850)
+                isInitialLoading = false
+            }
+
             CompositionLocalProvider(
                 LocalContext provides localizedContext,
                 LocalConfiguration provides localizedContext.resources.configuration
             ) {
                 UniCalendarTheme(darkTheme = isDarkTheme) {
-                    if (uiState.showSettingsScreen) {
-                        BackHandler {
-                            viewModel.dismissSettings()
+                    AnimatedContent(
+                        targetState = isInitialLoading,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(350)) togetherWith fadeOut(animationSpec = tween(280))
+                        },
+                        label = "StartupSplashTransition"
+                    ) { loading ->
+                        if (loading) {
+                            StartupLoadingScreen()
+                        } else {
+                            if (uiState.showSettingsScreen) {
+                                BackHandler {
+                                    viewModel.dismissSettings()
+                                }
+                                SettingsScreen(
+                                    themeMode = uiState.themeMode,
+                                    displayLayoutMode = uiState.displayLayoutMode,
+                                    appLanguage = uiState.appLanguage,
+                                    onBack = viewModel::dismissSettings,
+                                    onThemeModeChange = viewModel::setThemeMode,
+                                    onDisplayLayoutModeChange = viewModel::setDisplayLayoutMode,
+                                    onLanguageChange = viewModel::setAppLanguage,
+                                    onClearAllSchedules = viewModel::clearAllSchedules
+                                )
+                            } else {
+                                CalendarScreen(
+                                    uiState = uiState,
+                                    onViewModeChange = viewModel::setViewMode,
+                                    onSemesterFilterChange = viewModel::setSemesterFilter,
+                                    onOpenSettings = viewModel::openSettings,
+                                    onDismissSettings = viewModel::dismissSettings,
+                                    onThemeModeChange = viewModel::setThemeMode,
+                                    onLanguageChange = viewModel::setAppLanguage,
+                                    onDisplayLayoutModeChange = viewModel::setDisplayLayoutMode,
+                                    onDismissSemesterPrompt = viewModel::dismissSemesterPrompt,
+                                    onSemesterConfirmed = viewModel::onSemesterConfirmed,
+                                    onDateSelected = viewModel::onDateSelected,
+                                    onDismissDayDetailsSheet = viewModel::dismissDayDetailsSheet,
+                                    onPreviousMonth = viewModel::onPreviousMonth,
+                                    onNextMonth = viewModel::onNextMonth,
+                                    onPreviousWeek = viewModel::onPreviousWeek,
+                                    onNextWeek = viewModel::onNextWeek,
+                                    onTodayClick = viewModel::onTodaySelected,
+                                    onSetAddDialogVisible = viewModel::setAddDialogVisible,
+                                    onSetSyncDialogVisible = viewModel::setSyncDialogVisible,
+                                    onEditNoteClick = viewModel::onEditNoteClick,
+                                    onDismissNoteDialog = viewModel::onDismissNoteDialog,
+                                    onSaveNotes = viewModel::onSaveNotes,
+                                    onAddEvent = viewModel::addEvent,
+                                    onDeleteEvent = viewModel::deleteEvent,
+                                    onSyncFromGitHub = viewModel::syncFromGitHub,
+                                    onFileSelected = ::handleFileSelected,
+                                    onDismissSyncMessage = viewModel::dismissSyncMessage
+                                )
+                            }
                         }
-                        SettingsScreen(
-                            themeMode = uiState.themeMode,
-                            displayLayoutMode = uiState.displayLayoutMode,
-                            appLanguage = uiState.appLanguage,
-                            onBack = viewModel::dismissSettings,
-                            onThemeModeChange = viewModel::setThemeMode,
-                            onDisplayLayoutModeChange = viewModel::setDisplayLayoutMode,
-                            onLanguageChange = viewModel::setAppLanguage,
-                            onClearAllSchedules = viewModel::clearAllSchedules
-                        )
-                    } else {
-                        CalendarScreen(
-                            uiState = uiState,
-                            onViewModeChange = viewModel::setViewMode,
-                            onSemesterFilterChange = viewModel::setSemesterFilter,
-                            onOpenSettings = viewModel::openSettings,
-                            onDismissSettings = viewModel::dismissSettings,
-                            onThemeModeChange = viewModel::setThemeMode,
-                            onLanguageChange = viewModel::setAppLanguage,
-                            onDisplayLayoutModeChange = viewModel::setDisplayLayoutMode,
-                            onDismissSemesterPrompt = viewModel::dismissSemesterPrompt,
-                            onSemesterConfirmed = viewModel::onSemesterConfirmed,
-                            onDateSelected = viewModel::onDateSelected,
-                            onDismissDayDetailsSheet = viewModel::dismissDayDetailsSheet,
-                            onPreviousMonth = viewModel::onPreviousMonth,
-                            onNextMonth = viewModel::onNextMonth,
-                            onPreviousWeek = viewModel::onPreviousWeek,
-                            onNextWeek = viewModel::onNextWeek,
-                            onTodayClick = viewModel::onTodaySelected,
-                            onSetAddDialogVisible = viewModel::setAddDialogVisible,
-                            onSetSyncDialogVisible = viewModel::setSyncDialogVisible,
-                            onEditNoteClick = viewModel::onEditNoteClick,
-                            onDismissNoteDialog = viewModel::onDismissNoteDialog,
-                            onSaveNotes = viewModel::onSaveNotes,
-                            onAddEvent = viewModel::addEvent,
-                            onDeleteEvent = viewModel::deleteEvent,
-                            onSyncFromGitHub = viewModel::syncFromGitHub,
-                            onFileSelected = ::handleFileSelected,
-                            onDismissSyncMessage = viewModel::dismissSyncMessage
-                        )
                     }
                 }
             }

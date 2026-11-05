@@ -1,5 +1,6 @@
 package org.kastoriadev.unicalendar.ui.calendar.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -106,13 +107,13 @@ fun LazyItemScope.WeekDayColumn(
     val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale).uppercase()
     val borderColor = when {
         isSelected -> MaterialTheme.colorScheme.primary
-        isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-        else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+        isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+        else -> MaterialTheme.colorScheme.outlineVariant
     }
 
     val backgroundColor = when {
-        isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-        isToday -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        isToday -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         else -> MaterialTheme.colorScheme.surface
     }
 
@@ -127,16 +128,14 @@ fun LazyItemScope.WeekDayColumn(
     }
 
     Card(
-        modifier = cardModifier
-            .border(
-                width = if (isSelected) 2.dp else 1.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .clickable(onClick = onClick),
+        modifier = cardModifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 2.dp else 0.dp)
+        border = BorderStroke(
+            width = if (isSelected) 2.dp else 1.dp,
+            color = borderColor
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -244,8 +243,8 @@ fun WeekLessonBadge(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(typeColor.copy(alpha = 0.12f))
-            .border(0.5.dp, typeColor.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+            .background(typeColor.copy(alpha = 0.10f))
+            .border(1.dp, typeColor.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
             .padding(6.dp)
     ) {
         Column {

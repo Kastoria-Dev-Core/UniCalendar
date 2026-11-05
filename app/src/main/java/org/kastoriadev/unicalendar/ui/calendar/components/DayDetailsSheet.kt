@@ -88,7 +88,7 @@ fun DayDetailsSheet(
             }
 
             HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                color = MaterialTheme.colorScheme.outlineVariant,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
 

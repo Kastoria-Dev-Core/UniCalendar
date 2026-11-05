@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -145,7 +146,8 @@ fun ExpandableEventCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isExpanded) 3.dp else 1.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -188,10 +190,10 @@ fun ExpandableEventCard(
                                 )
                             },
                             colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = typeColor.copy(alpha = 0.12f),
+                                containerColor = typeColor.copy(alpha = 0.10f),
                                 labelColor = typeColor
                             ),
-                            border = null,
+                            border = BorderStroke(1.dp, typeColor.copy(alpha = 0.25f)),
                             modifier = Modifier.height(24.dp)
                         )
 
@@ -254,7 +256,7 @@ fun ExpandableEventCard(
                         .padding(top = 8.dp)
                 ) {
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.outlineVariant,
                         modifier = Modifier.padding(vertical = 6.dp)
                     )
 
@@ -278,7 +280,7 @@ fun ExpandableEventCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable(onClick = onEditNoteClick)
                             .padding(10.dp)
                     ) {
