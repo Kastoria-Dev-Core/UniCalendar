@@ -54,18 +54,23 @@ fun DayCell(
 
     val shape = if (isFullScreen) RoundedCornerShape(8.dp) else CircleShape
     val cellModifier = if (isFullScreen) {
+        val cellBg = when {
+            isSelected -> MaterialTheme.colorScheme.primaryContainer
+            isCurrentMonth -> MaterialTheme.colorScheme.surface
+            else -> Color.Transparent
+        }
+        val cellBorderModifier = when {
+            isToday -> Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, shape)
+            isCurrentMonth -> Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+            else -> Modifier
+        }
+
         modifier
             .fillMaxSize()
             .padding(1.5.dp)
             .clip(shape)
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-            )
-            .then(
-                if (isToday) {
-                    Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, shape)
-                } else Modifier
-            )
+            .background(cellBg)
+            .then(cellBorderModifier)
             .clickable { onDateClick(date) }
     } else {
         modifier
@@ -110,9 +115,10 @@ fun DayCell(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 1.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(pillColor.copy(alpha = 0.25f))
-                                .padding(horizontal = 2.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(pillColor.copy(alpha = 0.12f))
+                                .border(1.dp, pillColor.copy(alpha = 0.25f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
                         ) {
                             Text(
                                 text = event.title,

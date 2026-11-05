@@ -134,7 +134,7 @@ fun SyncScheduleDialog(
                     }
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 // Primary Automated Action: Sync from GitHub
                 Button(

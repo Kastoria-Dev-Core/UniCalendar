@@ -1,5 +1,6 @@
 package org.kastoriadev.unicalendar.ui.calendar.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -127,7 +128,8 @@ fun LessonNoteCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -170,10 +172,10 @@ fun LessonNoteCard(
                                 )
                             },
                             colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = typeColor.copy(alpha = 0.12f),
+                                containerColor = typeColor.copy(alpha = 0.10f),
                                 labelColor = typeColor
                             ),
-                            border = null,
+                            border = BorderStroke(1.dp, typeColor.copy(alpha = 0.25f)),
                             modifier = Modifier.height(22.dp)
                         )
                     }
@@ -230,7 +232,7 @@ fun LessonNoteCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable(onClick = onEditClick)
                     .padding(10.dp)
             ) {

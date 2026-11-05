@@ -132,6 +132,15 @@ fun CalendarScreen(
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                             onClick = { onViewModeChange(CalendarViewMode.WEEK) },
                             selected = uiState.viewMode == CalendarViewMode.WEEK,
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                inactiveContainerColor = MaterialTheme.colorScheme.surface,
+                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            border = SegmentedButtonDefaults.borderStroke(
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            ),
                             icon = {
                                 Icon(
                                     imageVector = Icons.Default.CalendarViewWeek,
@@ -147,6 +156,15 @@ fun CalendarScreen(
                             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                             onClick = { onViewModeChange(CalendarViewMode.MONTH) },
                             selected = uiState.viewMode == CalendarViewMode.MONTH,
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                inactiveContainerColor = MaterialTheme.colorScheme.surface,
+                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            border = SegmentedButtonDefaults.borderStroke(
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            ),
                             icon = {
                                 Icon(
                                     imageVector = Icons.Default.CalendarMonth,
@@ -217,8 +235,8 @@ fun CalendarScreen(
             )
 
             HorizontalDivider(
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
             )
 
             val isFullScreen = uiState.displayLayoutMode == DisplayLayoutMode.FULLSCREEN
@@ -259,7 +277,7 @@ fun CalendarScreen(
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
                             thickness = 1.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant
                         )
 
                         EventList(
@@ -306,7 +324,7 @@ fun CalendarScreen(
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
                             thickness = 1.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant
                         )
 
                         LessonNotesSection(
