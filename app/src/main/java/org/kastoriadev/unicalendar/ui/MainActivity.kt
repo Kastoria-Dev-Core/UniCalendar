@@ -28,12 +28,18 @@ class MainActivity : ComponentActivity() {
 
                 CalendarScreen(
                     uiState = uiState,
+                    onViewModeChange = viewModel::setViewMode,
                     onDateSelected = viewModel::onDateSelected,
                     onPreviousMonth = viewModel::onPreviousMonth,
                     onNextMonth = viewModel::onNextMonth,
+                    onPreviousWeek = viewModel::onPreviousWeek,
+                    onNextWeek = viewModel::onNextWeek,
                     onTodayClick = viewModel::onTodaySelected,
                     onSetAddDialogVisible = viewModel::setAddDialogVisible,
                     onSetSyncDialogVisible = viewModel::setSyncDialogVisible,
+                    onEditNoteClick = viewModel::onEditNoteClick,
+                    onDismissNoteDialog = viewModel::onDismissNoteDialog,
+                    onSaveNotes = viewModel::onSaveNotes,
                     onAddEvent = viewModel::addEvent,
                     onDeleteEvent = viewModel::deleteEvent,
                     onSyncSchedule = viewModel::syncSchedule,

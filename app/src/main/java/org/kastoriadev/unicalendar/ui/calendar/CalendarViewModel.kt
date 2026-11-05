@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.kastoriadev.unicalendar.data.sync.ScheduleSyncManager
@@ -15,9 +14,11 @@ import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.EventType
 import org.kastoriadev.unicalendar.domain.model.SyncResult
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.time.temporal.TemporalAdjusters
 
 class CalendarViewModel(
     private val repository: EventRepository,
@@ -47,11 +48,17 @@ class CalendarViewModel(
         }
     }
 
+    fun setViewMode(mode: CalendarViewMode) {
+        _uiState.update { it.copy(viewMode = mode) }
+    }
+
     fun onDateSelected(date: LocalDate) {
+        val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         _uiState.update { current ->
             current.copy(
                 selectedDate = date,
                 currentMonth = YearMonth.from(date),
+                currentWeekStart = weekStart,
                 selectedDateEvents = current.monthEvents[date] ?: emptyList()
             )
         }
@@ -59,13 +66,55 @@ class CalendarViewModel(
 
     fun onPreviousMonth() {
         _uiState.update { current ->
-            current.copy(currentMonth = current.currentMonth.minusMonths(1))
+            val prevMonth = current.currentMonth.minusMonths(1)
+            val newSelectedDate = prevMonth.atDay(current.selectedDate.dayOfMonth.coerceAtMost(prevMonth.lengthOfMonth()))
+            current.copy(
+                currentMonth = prevMonth,
+                selectedDate = newSelectedDate,
+                currentWeekStart = newSelectedDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
+                selectedDateEvents = current.monthEvents[newSelectedDate] ?: emptyList()
+            )
         }
     }
 
     fun onNextMonth() {
         _uiState.update { current ->
-            current.copy(currentMonth = current.currentMonth.plusMonths(1))
+            val nextMonth = current.currentMonth.plusMonths(1)
+            val newSelectedDate = nextMonth.atDay(current.selectedDate.dayOfMonth.coerceAtMost(nextMonth.lengthOfMonth()))
+            current.copy(
+                currentMonth = nextMonth,
+                selectedDate = newSelectedDate,
+                currentWeekStart = newSelectedDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
+                selectedDateEvents = current.monthEvents[newSelectedDate] ?: emptyList()
+            )
+        }
+    }
+
+    fun onPreviousWeek() {
+        _uiState.update { current ->
+            val prevWeekStart = current.currentWeekStart.minusWeeks(1)
+            val dayOffset = current.selectedDate.dayOfWeek.value - DayOfWeek.MONDAY.value
+            val newSelectedDate = prevWeekStart.plusDays(dayOffset.toLong())
+            current.copy(
+                currentWeekStart = prevWeekStart,
+                selectedDate = newSelectedDate,
+                currentMonth = YearMonth.from(newSelectedDate),
+                selectedDateEvents = current.monthEvents[newSelectedDate] ?: emptyList()
+            )
+        }
+    }
+
+    fun onNextWeek() {
+        _uiState.update { current ->
+            val nextWeekStart = current.currentWeekStart.plusWeeks(1)
+            val dayOffset = current.selectedDate.dayOfWeek.value - DayOfWeek.MONDAY.value
+            val newSelectedDate = nextWeekStart.plusDays(dayOffset.toLong())
+            current.copy(
+                currentWeekStart = nextWeekStart,
+                selectedDate = newSelectedDate,
+                currentMonth = YearMonth.from(newSelectedDate),
+                selectedDateEvents = current.monthEvents[newSelectedDate] ?: emptyList()
+            )
         }
     }
 
@@ -80,6 +129,21 @@ class CalendarViewModel(
 
     fun setSyncDialogVisible(visible: Boolean) {
         _uiState.update { it.copy(showSyncDialog = visible) }
+    }
+
+    fun onEditNoteClick(event: CalendarEvent) {
+        _uiState.update { it.copy(selectedEventForNotes = event) }
+    }
+
+    fun onDismissNoteDialog() {
+        _uiState.update { it.copy(selectedEventForNotes = null) }
+    }
+
+    fun onSaveNotes(eventId: Long, notes: String) {
+        viewModelScope.launch {
+            repository.updateNotes(eventId, notes)
+            onDismissNoteDialog()
+        }
     }
 
     fun dismissSyncMessage() {
