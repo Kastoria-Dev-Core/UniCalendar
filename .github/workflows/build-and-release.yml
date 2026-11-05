@@ -88,7 +88,7 @@ jobs:
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease --stacktrace || echo "Release build requires signing configuration"
+        run: ./gradlew assembleRelease --stacktrace
 
       - name: Stop Gradle Daemon
         run: ./gradlew --stop
