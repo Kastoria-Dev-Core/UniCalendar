@@ -50,7 +50,7 @@
     <string name="about_dept">Department of Informatics, University of Western Macedonia (Kastoria)</string>
     <string name="about_sync_title">Automated Synchronization</string>
     <string name="about_sync_desc">Timetables are regularly parsed and updated directly via automated GitHub repository actions.</string>
-    <string name="about_version">Version 1.0.0</string>
+    <string name="about_version">Version %1$s</string>
     <string name="about_dev">Developed by KastoriaDevCore</string>
 
     <!-- Semester Filtering & Selection -->

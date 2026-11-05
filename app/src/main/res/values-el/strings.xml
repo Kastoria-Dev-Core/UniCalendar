@@ -50,7 +50,7 @@
     <string name="about_dept">Τμήμα Πληροφορικής, Πανεπιστήμιο Δυτικής Μακεδονίας (Καστοριά)</string>
     <string name="about_sync_title">Αυτόματος Συγχρονισμός</string>
     <string name="about_sync_desc">Τα ωρολόγια προγράμματα αναλύονται και ενημερώνονται αυτόματα μέσω GitHub Actions.</string>
-    <string name="about_version">Έκδοση 1.0.0</string>
+    <string name="about_version">Έκδοση %1$s</string>
     <string name="about_dev">Αναπτύχθηκε από την KastoriaDevCore</string>
 
     <!-- Semester Filtering & Selection -->
