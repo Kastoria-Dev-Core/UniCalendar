@@ -90,6 +90,9 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleRelease --stacktrace || echo "Release build requires signing configuration"
 
+      - name: Stop Gradle Daemon
+        run: ./gradlew --stop
+
       - name: Prepare APK Artifacts
         id: prepare_artifacts
         run: |

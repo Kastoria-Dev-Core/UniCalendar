@@ -2,12 +2,18 @@ package org.kastoriadev.unicalendar.ui.calendar
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CalendarViewWeek
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -17,6 +23,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -25,35 +34,50 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+import org.kastoriadev.unicalendar.domain.model.EventType
 import org.kastoriadev.unicalendar.ui.calendar.components.AddEventDialog
 import org.kastoriadev.unicalendar.ui.calendar.components.DaysOfWeekHeader
+import org.kastoriadev.unicalendar.ui.calendar.components.EditNoteDialog
 import org.kastoriadev.unicalendar.ui.calendar.components.EventList
+import org.kastoriadev.unicalendar.ui.calendar.components.LessonNotesSection
 import org.kastoriadev.unicalendar.ui.calendar.components.MonthGrid
 import org.kastoriadev.unicalendar.ui.calendar.components.MonthHeader
 import org.kastoriadev.unicalendar.ui.calendar.components.SyncScheduleDialog
+import org.kastoriadev.unicalendar.ui.calendar.components.WeekGrid
+import org.kastoriadev.unicalendar.ui.calendar.components.WeekHeader
+import java.time.LocalDate
+import java.time.LocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
     uiState: CalendarUiState,
-    onDateSelected: (java.time.LocalDate) -> Unit,
+    onViewModeChange: (CalendarViewMode) -> Unit,
+    onDateSelected: (LocalDate) -> Unit,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
+    onPreviousWeek: () -> Unit,
+    onNextWeek: () -> Unit,
     onTodayClick: () -> Unit,
     onSetAddDialogVisible: (Boolean) -> Unit,
     onSetSyncDialogVisible: (Boolean) -> Unit,
+    onEditNoteClick: (CalendarEvent) -> Unit,
+    onDismissNoteDialog: () -> Unit,
+    onSaveNotes: (Long, String) -> Unit,
     onAddEvent: (
         title: String,
         description: String,
         location: String,
-        startTime: java.time.LocalDateTime,
-        endTime: java.time.LocalDateTime,
-        type: org.kastoriadev.unicalendar.domain.model.EventType
+        startTime: LocalDateTime,
+        endTime: LocalDateTime,
+        type: EventType
     ) -> Unit,
-    onDeleteEvent: (org.kastoriadev.unicalendar.domain.model.CalendarEvent) -> Unit,
+    onDeleteEvent: (CalendarEvent) -> Unit,
     onSyncSchedule: (String) -> Unit,
     onDismissSyncMessage: () -> Unit,
     modifier: Modifier = Modifier
@@ -75,10 +99,47 @@ fun CalendarScreen(
                     Text(
                         text = "UniCalendar",
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.headlineMedium
+                        style = MaterialTheme.typography.titleLarge
                     )
                 },
                 actions = {
+                    // View Switcher (Week / Month)
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier
+                            .height(36.dp)
+                            .padding(end = 8.dp)
+                    ) {
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            onClick = { onViewModeChange(CalendarViewMode.WEEK) },
+                            selected = uiState.viewMode == CalendarViewMode.WEEK,
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarViewWeek,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        ) {
+                            Text(text = "Week", style = MaterialTheme.typography.labelSmall)
+                        }
+
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            onClick = { onViewModeChange(CalendarViewMode.MONTH) },
+                            selected = uiState.viewMode == CalendarViewMode.MONTH,
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarMonth,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        ) {
+                            Text(text = "Month", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+
                     if (uiState.isSyncing) {
                         CircularProgressIndicator(
                             modifier = Modifier
@@ -121,36 +182,73 @@ fun CalendarScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            MonthHeader(
-                currentMonth = uiState.currentMonth,
-                onPreviousMonth = onPreviousMonth,
-                onNextMonth = onNextMonth,
-                onTodayClick = onTodayClick
-            )
+            when (uiState.viewMode) {
+                CalendarViewMode.MONTH -> {
+                    MonthHeader(
+                        currentMonth = uiState.currentMonth,
+                        onPreviousMonth = onPreviousMonth,
+                        onNextMonth = onNextMonth,
+                        onTodayClick = onTodayClick
+                    )
 
-            DaysOfWeekHeader()
+                    DaysOfWeekHeader()
 
-            MonthGrid(
-                currentMonth = uiState.currentMonth,
-                selectedDate = uiState.selectedDate,
-                eventsMap = uiState.monthEvents,
-                onDateClick = onDateSelected
-            )
+                    MonthGrid(
+                        currentMonth = uiState.currentMonth,
+                        selectedDate = uiState.selectedDate,
+                        eventsMap = uiState.monthEvents,
+                        onDateClick = onDateSelected
+                    )
 
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                thickness = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
 
-            EventList(
-                selectedDate = uiState.selectedDate,
-                events = uiState.selectedDateEvents,
-                onDeleteEvent = onDeleteEvent,
-                modifier = Modifier.weight(1f)
-            )
+                    EventList(
+                        selectedDate = uiState.selectedDate,
+                        events = uiState.selectedDateEvents,
+                        onEditNoteClick = onEditNoteClick,
+                        onDeleteEvent = onDeleteEvent,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                CalendarViewMode.WEEK -> {
+                    WeekHeader(
+                        weekStart = uiState.currentWeekStart,
+                        onPreviousWeek = onPreviousWeek,
+                        onNextWeek = onNextWeek,
+                        onTodayClick = onTodayClick
+                    )
+
+                    WeekGrid(
+                        weekStart = uiState.currentWeekStart,
+                        selectedDate = uiState.selectedDate,
+                        eventsMap = uiState.monthEvents,
+                        onDateClick = onDateSelected
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    LessonNotesSection(
+                        selectedDate = uiState.selectedDate,
+                        events = uiState.selectedDateEvents,
+                        onEditNoteClick = onEditNoteClick,
+                        onDeleteEvent = onDeleteEvent,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
         }
 
         if (uiState.showAddDialog) {
@@ -165,6 +263,14 @@ fun CalendarScreen(
             SyncScheduleDialog(
                 onDismiss = { onSetSyncDialogVisible(false) },
                 onSyncConfirm = onSyncSchedule
+            )
+        }
+
+        uiState.selectedEventForNotes?.let { event ->
+            EditNoteDialog(
+                event = event,
+                onDismiss = onDismissNoteDialog,
+                onSaveNotes = onSaveNotes
             )
         }
     }

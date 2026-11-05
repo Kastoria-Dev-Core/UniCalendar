@@ -54,6 +54,10 @@ class EventRepositoryImpl(
         dao.update(event.toEntity())
     }
 
+    override suspend fun updateNotes(id: Long, notes: String) {
+        dao.updateNotes(id, notes)
+    }
+
     override suspend fun deleteEvent(event: CalendarEvent) {
         dao.delete(event.toEntity())
     }
@@ -71,6 +75,7 @@ class EventRepositoryImpl(
         title = title,
         description = description,
         location = location,
+        notes = notes,
         startTime = startTime,
         endTime = endTime,
         type = type,
@@ -83,6 +88,7 @@ class EventRepositoryImpl(
         title = title,
         description = description,
         location = location,
+        notes = notes,
         startTime = startTime,
         endTime = endTime,
         type = type,
