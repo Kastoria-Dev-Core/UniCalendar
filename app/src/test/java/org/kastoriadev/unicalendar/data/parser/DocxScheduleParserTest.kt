@@ -82,6 +82,47 @@ class DocxScheduleParserTest {
     }
 
     @Test
+    fun parseDocumentXml_gridLayout_withVerticalMerge() {
+        val xml = """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                <w:body>
+                    <w:p><w:r><w:t>Ωρολόγιο Πρόγραμμα μαθημάτων Χειμερινού Εξαμήνου 2026-2027</w:t></w:r></w:p>
+                    <w:p><w:r><w:t>Α΄ εξάμηνο</w:t></w:r></w:p>
+                    <w:tbl>
+                        <w:tr>
+                            <w:tc><w:p><w:r><w:t>ΩΡΑ</w:t></w:r></w:p></w:tc>
+                            <w:tc><w:p><w:r><w:t>ΔΕΥΤΕΡΑ</w:t></w:r></w:p></w:tc>
+                            <w:tc><w:p><w:r><w:t>ΤΡΙΤΗ</w:t></w:r></w:p></w:tc>
+                        </w:tr>
+                        <w:tr>
+                            <w:tc><w:p><w:r><w:t>09:00 - 10:00</w:t></w:r></w:p></w:tc>
+                            <w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Ηλεκτρονική</w:t><w:br/><w:t>Δ. Φωτιάδης</w:t><w:br/><w:t>Μεγ. Αμφιθέατρο</w:t></w:r></w:p></w:tc>
+                            <w:tc><w:p/></w:tc>
+                        </w:tr>
+                        <w:tr>
+                            <w:tc><w:p><w:r><w:t>10:00 - 11:00</w:t></w:r></w:p></w:tc>
+                            <w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p/></w:tc>
+                            <w:tc><w:p/></w:tc>
+                        </w:tr>
+                    </w:tbl>
+                </w:body>
+            </w:document>
+        """.trimIndent()
+
+        val events = parser.parseDocumentXml(xml, "grid_test.docx")
+        assertTrue(events.isNotEmpty())
+        val first = events[0]
+        assertEquals("Ηλεκτρονική", first.title)
+        assertEquals("1", first.semester)
+        assertEquals(DayOfWeek.MONDAY, first.startTime.dayOfWeek)
+        assertEquals(9, first.startTime.hour)
+        assertEquals(11, first.endTime.hour)
+        assertTrue(first.description.contains("Φωτιάδης"))
+        assertEquals("Μεγ. Αμφιθέατρο", first.location)
+    }
+
+    @Test
     fun parseRealTimetableDocx_identifiesSemestersAndCoursesCorrectly() {
         val file = File("Timetable_ΧE_2026-2027_V1.2-1.docx")
         if (!file.exists()) return // Skip if file is moved
