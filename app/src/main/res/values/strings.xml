@@ -52,13 +52,12 @@
 
     <!-- About & Attributions -->
     <string name="about_version">Version %1$s</string>
-    <string name="about_built_by">Developed by Gio &amp; KastoriaDevCore</string>
+    <string name="about_built_by">Developed by Georgios Gasparis &amp; KastoriaDevCore</string>
     <string name="about_org_desc">KastoriaDevCore is an independent student developer organization building digital open-source tools.</string>
-    <string name="about_github_label">Source Code on GitHub</string>
-    <string name="about_disclaimer_title">Independent Project Disclaimer</string>
-    <string name="about_disclaimer_desc">UniCalendar is an independent open-source student project. It is NOT an official application, and it is NOT affiliated with, endorsed by, or sponsored by the University of Western Macedonia (UOWM) or the Department of Informatics.</string>
-    <string name="about_libraries_title">Open-Source Attributions &amp; Libraries</string>
-    <string name="about_libraries_desc">UniCalendar is built using open-source libraries: Jetpack Compose, Material 3, Room Database, Kotlin Coroutines, OkHttp, and Jsoup.</string>
+    <string name="about_disclaimer_title">Disclaimer</string>
+    <string name="about_disclaimer_desc">UniCalendar is an independent open-source student project. It is not an official application and is not affiliated with, endorsed by, or sponsored by the University of Western Macedonia (UOWM) or the Department of Informatics.</string>
+    <string name="about_libraries_title">Open-Source Libraries</string>
+    <string name="about_libraries_desc">OkHttp (Apache 2.0), Jsoup (MIT)</string>
 
     <!-- Semester Filtering & Selection -->
     <string name="semester_all">All Semesters</string>

@@ -52,13 +52,12 @@
 
     <!-- About & Attributions -->
     <string name="about_version">Έκδοση %1$s</string>
-    <string name="about_built_by">Αναπτύχθηκε από τον Gio &amp; την KastoriaDevCore</string>
+    <string name="about_built_by">Αναπτύχθηκε από τον Γεώργιο Γάσπαρη &amp; την KastoriaDevCore</string>
     <string name="about_org_desc">Η KastoriaDevCore είναι μια ανεξάρτητη φοιτητική κοινότητα ανάπτυξης ψηφιακών εργαλείων ανοιχτού κώδικα.</string>
-    <string name="about_github_label">Πηγαίος Κώδικας στο GitHub</string>
     <string name="about_disclaimer_title">Αποποίηση Ευθύνης</string>
-    <string name="about_disclaimer_desc">Το UniCalendar είναι μια ανεξάρτητη φοιτητική εφαρμογή ανοιχτού κώδικα. ΔΕΝ αποτελεί επίσημη εφαρμογή και ΔΕΝ συνδέεται, υποστηρίζεται ή εκπροσωπεί το Πανεπιστήμιο Δυτικής Μακεδονίας (ΠΔΜ) ή το Τμήμα Πληροφορικής.</string>
-    <string name="about_libraries_title">Συντελεστές &amp; Βιβλιοθήκες Ανοιχτού Κώδικα</string>
-    <string name="about_libraries_desc">Το UniCalendar αναπτύχθηκε με τη χρήση βιβλιοθηκών ανοιχτού κώδικα: Jetpack Compose, Material 3, Room Database, Kotlin Coroutines, OkHttp και Jsoup.</string>
+    <string name="about_disclaimer_desc">Το UniCalendar είναι μια ανεξάρτητη φοιτητική εφαρμογή ανοιχτού κώδικα. Δεν αποτελεί επίσημη εφαρμογή και δεν συνδέεται, υποστηρίζεται ή εκπροσωπεί το Πανεπιστήμιο Δυτικής Μακεδονίας (ΠΔΜ) ή το Τμήμα Πληροφορικής.</string>
+    <string name="about_libraries_title">Βιβλιοθήκες Ανοιχτού Κώδικα</string>
+    <string name="about_libraries_desc">OkHttp (Apache 2.0), Jsoup (MIT)</string>
 
     <!-- Semester Filtering & Selection -->
     <string name="semester_all">Όλα τα Εξάμηνα</string>
