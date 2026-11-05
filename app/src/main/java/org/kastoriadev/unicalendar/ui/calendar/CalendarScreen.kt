@@ -34,8 +34,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
+import org.kastoriadev.unicalendar.domain.model.AppLanguage
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
 import org.kastoriadev.unicalendar.domain.model.EventType
@@ -66,6 +70,7 @@ fun CalendarScreen(
     onOpenSettings: () -> Unit,
     onDismissSettings: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
+    onLanguageChange: (AppLanguage) -> Unit,
     onDisplayLayoutModeChange: (DisplayLayoutMode) -> Unit,
     onDismissSemesterPrompt: () -> Unit,
     onSemesterConfirmed: (semester: String, includePde: Boolean) -> Unit,
@@ -97,10 +102,11 @@ fun CalendarScreen(
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(uiState.syncMessage) {
         uiState.syncMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
+            snackbarHostState.showSnackbar(message.asString(context))
             onDismissSyncMessage()
         }
     }
@@ -111,7 +117,7 @@ fun CalendarScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "UniCalendar",
+                        text = stringResource(R.string.app_name),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleLarge
                     )
@@ -135,7 +141,7 @@ fun CalendarScreen(
                                 )
                             }
                         ) {
-                            Text(text = "Week", style = MaterialTheme.typography.labelSmall)
+                            Text(text = stringResource(R.string.view_week), style = MaterialTheme.typography.labelSmall)
                         }
 
                         SegmentedButton(
@@ -150,7 +156,7 @@ fun CalendarScreen(
                                 )
                             }
                         ) {
-                            Text(text = "Month", style = MaterialTheme.typography.labelSmall)
+                            Text(text = stringResource(R.string.view_month), style = MaterialTheme.typography.labelSmall)
                         }
                     }
 
@@ -166,7 +172,7 @@ fun CalendarScreen(
                         IconButton(onClick = { onSetSyncDialogVisible(true) }) {
                             Icon(
                                 imageVector = Icons.Default.CloudDownload,
-                                contentDescription = "Sync schedule"
+                                contentDescription = stringResource(R.string.action_sync)
                             )
                         }
                     }
@@ -175,7 +181,7 @@ fun CalendarScreen(
                     IconButton(onClick = onOpenSettings) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings"
+                            contentDescription = stringResource(R.string.action_settings)
                         )
                     }
                 },
@@ -192,7 +198,7 @@ fun CalendarScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Add event"
+                    contentDescription = stringResource(R.string.action_add_event)
                 )
             }
         },
@@ -329,10 +335,12 @@ fun CalendarScreen(
             SettingsDialog(
                 themeMode = uiState.themeMode,
                 displayLayoutMode = uiState.displayLayoutMode,
+                appLanguage = uiState.appLanguage,
                 selectedSemester = uiState.selectedSemester,
                 includePde = uiState.includePde,
                 onThemeModeChange = onThemeModeChange,
                 onDisplayLayoutModeChange = onDisplayLayoutModeChange,
+                onLanguageChange = onLanguageChange,
                 onSemesterChange = onSemesterConfirmed,
                 onDismiss = onDismissSettings
             )

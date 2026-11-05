@@ -16,6 +16,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.kastoriadev.unicalendar.data.sync.ScheduleSyncManager
+import org.kastoriadev.unicalendar.domain.model.AppLanguage
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
@@ -190,5 +191,20 @@ class CalendarViewModelTest {
         // Close settings
         viewModel.dismissSettingsDialog()
         assertFalse(viewModel.uiState.value.showSettingsDialog)
+    }
+
+    @Test
+    fun languageSettings_toggleCorrectly() = runTest {
+        val repo = FakeEventRepository()
+        val syncManager = ScheduleSyncManager(repo)
+        val viewModel = CalendarViewModel(repo, syncManager)
+
+        assertEquals(AppLanguage.SYSTEM, viewModel.uiState.value.appLanguage)
+
+        viewModel.setAppLanguage(AppLanguage.GREEK)
+        assertEquals(AppLanguage.GREEK, viewModel.uiState.value.appLanguage)
+
+        viewModel.setAppLanguage(AppLanguage.ENGLISH)
+        assertEquals(AppLanguage.ENGLISH, viewModel.uiState.value.appLanguage)
     }
 }

@@ -1,0 +1,127 @@
+<resources>
+    <!-- App & Navigation -->
+    <string name="app_name">UniCalendar</string>
+    <string name="view_week">Εβδομάδα</string>
+    <string name="view_month">Μήνας</string>
+    <string name="action_previous_month">Προηγούμενος μήνας</string>
+    <string name="action_next_month">Επόμενος μήνας</string>
+    <string name="action_previous_week">Προηγούμενη εβδομάδα</string>
+    <string name="action_next_week">Επόμενη εβδομάδα</string>
+    <string name="action_today">Σήμερα</string>
+    <string name="action_add_event">Προσθήκη συμβάντος</string>
+    <string name="action_sync">Συγχρονισμός προγράμματος</string>
+    <string name="action_settings">Ρυθμίσεις</string>
+
+    <!-- General Buttons & Actions -->
+    <string name="btn_save">Αποθήκευση</string>
+    <string name="btn_cancel">Ακύρωση</string>
+    <string name="btn_delete">Διαγραφή</string>
+    <string name="btn_edit">Επεξεργασία</string>
+    <string name="btn_done">Τέλος</string>
+    <string name="btn_close">Κλείσιμο</string>
+    <string name="btn_confirm_calendar">Επιβεβαίωση Προγράμματος</string>
+
+    <!-- Settings Dialog -->
+    <string name="settings_title">Ρυθμίσεις</string>
+    <string name="tab_appearance">Εμφάνιση</string>
+    <string name="tab_semester">Εξάμηνο</string>
+    <string name="tab_about">Σχετικά</string>
+
+    <string name="settings_section_theme">Θέμα Εφαρμογής</string>
+    <string name="theme_system">Προεπιλογή συστήματος</string>
+    <string name="theme_light">Φωτεινό θέμα</string>
+    <string name="theme_dark">Σκοτεινό θέμα</string>
+
+    <string name="settings_section_layout">Προβολή Ημερολογίου</string>
+    <string name="layout_split">Διαχωρισμένη οθόνη</string>
+    <string name="layout_split_desc">Το ημερολόγιο καταλαμβάνει τη μισή οθόνη και οι λεπτομέρειες εμφανίζονται ακριβώς από κάτω.</string>
+    <string name="layout_fullscreen">Πλήρης οθόνη</string>
+    <string name="layout_fullscreen_desc">Το ημερολόγιο καταλαμβάνει όλη την οθόνη. Πατώντας σε μια ημέρα ανοίγουν οι λεπτομέρειες.</string>
+
+    <string name="settings_section_language">Γλώσσα / Language</string>
+    <string name="lang_system">Προεπιλογή συστήματος (Default)</string>
+    <string name="lang_en">English (Αγγλικά)</string>
+    <string name="lang_el">Ελληνικά (Greek)</string>
+
+    <string name="settings_active_semester">Ενεργό Ακαδημαϊκό Εξάμηνο</string>
+    <string name="settings_include_pde">Συμπερίληψη μαθημάτων ΠΔΕ</string>
+    <string name="settings_include_pde_desc">Προσθήκη μαθημάτων Παιδαγωγικής Επάρκειας στο ημερολόγιό σας</string>
+
+    <string name="about_dept">Τμήμα Πληροφορικής, Πανεπιστήμιο Δυτικής Μακεδονίας (Καστοριά)</string>
+    <string name="about_sync_title">Αυτόματος Συγχρονισμός</string>
+    <string name="about_sync_desc">Τα ωρολόγια προγράμματα αναλύονται και ενημερώνονται αυτόματα μέσω GitHub Actions.</string>
+    <string name="about_version">Έκδοση %1$s</string>
+    <string name="about_dev">Αναπτύχθηκε από την KastoriaDevCore</string>
+
+    <!-- Semester Filtering & Selection -->
+    <string name="semester_all">Όλα τα Εξάμηνα</string>
+    <string name="semester_all_courses">Όλα τα Μαθήματα</string>
+    <string name="semester_format">%1$so Εξάμηνο (Semester %1$s)</string>
+    <string name="semester_pde">ΠΔΕ (Παιδαγωγική Επάρκεια)</string>
+    <string name="filter_all_courses">Όλα τα Μαθήματα</string>
+    <string name="filter_sem_format">Εξ. %1$s</string>
+    <string name="filter_pde">ΠΔΕ</string>
+
+    <!-- Onboarding Dialog -->
+    <string name="dialog_select_semester_title">Επιλέξτε το Εξάμηνό σας</string>
+    <string name="dialog_select_semester_desc">Το UniCalendar δημιουργεί εξατομικευμένο πρόγραμμα για το εξάμηνό σας. Μπορείτε να το αλλάξετε ανά πάσα στιγμή από τις ρυθμίσεις.</string>
+    <string name="dialog_select_semester_pde_desc">Προσθήκη μαθημάτων παιδαγωγικής ενότητας στο πρόγραμμά σας</string>
+
+    <!-- Sync Schedule Dialog -->
+    <string name="dialog_sync_title">Συγχρονισμός Προγράμματος</string>
+    <string name="dialog_sync_desc">Συγχρονίστε αυτόματα το ωρολόγιο πρόγραμμα από το αποθετήριο GitHub ή εισαγάγετε τοπικό αρχείο.</string>
+    <string name="target_semester_label">Εξάμηνο-στόχος</string>
+    <string name="sync_all_semesters_label">Όλα τα Εξάμηνα (Πλήρες Πρόγραμμα)</string>
+    <string name="btn_sync_github">Συγχρονισμός από GitHub</string>
+    <string name="btn_choose_local_file">Επιλογή τοπικού .docx / .ics</string>
+    <string name="sync_in_progress">Συγχρονισμός προγράμματος...</string>
+    <string name="sync_success_format">Εισήχθησαν επιτυχώς %1$d προγραμματισμένα μαθήματα</string>
+    <string name="sync_success_stream_format">Εισήχθησαν επιτυχώς %1$d μαθήματα από το αρχείο</string>
+    <string name="sync_failed_format">Αποτυχία συγχρονισμού: %1$s</string>
+    <string name="import_failed_format">Αποτυχία εισαγωγής: %1$s</string>
+
+    <!-- Calendar & Event List UI -->
+    <string name="tap_lesson_for_notes">Πατήστε για σημειώσεις</string>
+    <string name="no_events">Δεν υπάρχουν μαθήματα ή συμβάντα για αυτή την ημέρα</string>
+    <string name="no_lessons">Κανένα μάθημα</string>
+    <string name="more_events_format">+%1$d ακόμη</string>
+    <string name="scheduled_courses_count_format">%1$d προγραμματισμένα μαθήματα</string>
+    <string name="notes_for_date">Σημειώσεις για %1$s</string>
+    <string name="lessons_count_single">1 μάθημα</string>
+    <string name="lessons_count_multiple">%1$d μαθήματα</string>
+    <string name="field_description">Περιγραφή:</string>
+    <string name="field_personal_notes">Προσωπικές Σημειώσεις:</string>
+    <string name="notes_empty_tap">Δεν υπάρχουν σημειώσεις. Πατήστε για προσθήκη σημειώσεων ή εργασιών.</string>
+    <string name="notes_empty_placeholder_week">Πατήστε για προσθήκη σημειώσεων, εργασιών ή ύλης...</string>
+    <string name="content_desc_synced">Συγχρονισμένο από το ωρολόγιο πρόγραμμα</string>
+    <string name="content_desc_expand">Εμφάνιση λεπτομερειών</string>
+    <string name="content_desc_collapse">Απόκρυψη λεπτομερειών</string>
+
+    <!-- Add Event Dialog -->
+    <string name="dialog_add_title">Προσθήκη Συμβάντος για %1$s</string>
+    <string name="field_title">Τίτλος</string>
+    <string name="field_location_hint">Αίθουσα (π.χ. Αίθουσα 102)</string>
+    <string name="field_semester_hint">Εξάμηνο (προαιρετικό, π.χ. 1, 3, 5, ΠΔΕ)</string>
+    <string name="field_description_input">Περιγραφή</string>
+    <string name="field_time">Ώρα</string>
+    <string name="field_start_h">Έναρξη Ω</string>
+    <string name="field_start_m">Έναρξη Λ</string>
+    <string name="field_end_h">Λήξη Ω</string>
+    <string name="field_end_m">Λήξη Λ</string>
+    <string name="field_category">Κατηγορία</string>
+    <string name="error_empty_title">Ο τίτλος δεν μπορεί να είναι κενός</string>
+    <string name="error_invalid_time">Παρακαλώ εισάγετε έγκυρες ώρες (00-23, 00-59)</string>
+
+    <!-- Edit Note Dialog -->
+    <string name="dialog_note_title">Σημειώσεις για %1$s</string>
+    <string name="dialog_note_desc">Προσθέστε εργασίες, ύλη εξετάσεων, οδηγίες καθηγητή ή υπενθυμίσεις.</string>
+    <string name="field_lesson_notes">Σημειώσεις Μαθήματος</string>
+    <string name="hint_lesson_notes">π.χ. Ασκήσεις Κεφαλαίου 4 για την επόμενη Δευτέρα...</string>
+
+    <!-- Event Types -->
+    <string name="event_type_lecture">Διάλεξη</string>
+    <string name="event_type_lab">Εργαστήριο</string>
+    <string name="event_type_exam">Εξέταση</string>
+    <string name="event_type_deadline">Προθεσμία</string>
+    <string name="event_type_general">Γενικό</string>
+</resources>

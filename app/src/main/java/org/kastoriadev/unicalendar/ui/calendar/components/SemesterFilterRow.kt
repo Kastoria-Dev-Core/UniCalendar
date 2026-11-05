@@ -11,7 +11,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
 
 @Composable
 fun SemesterFilterRow(
@@ -20,16 +22,16 @@ fun SemesterFilterRow(
     modifier: Modifier = Modifier
 ) {
     val semesters = listOf(
-        "ALL" to "All Courses",
-        "1" to "Sem 1",
-        "2" to "Sem 2",
-        "3" to "Sem 3",
-        "4" to "Sem 4",
-        "5" to "Sem 5",
-        "6" to "Sem 6",
-        "7" to "Sem 7",
-        "8" to "Sem 8",
-        "PDE" to "ΠΔΕ"
+        "ALL" to stringResource(R.string.filter_all_courses),
+        "1" to stringResource(R.string.filter_sem_format, "1"),
+        "2" to stringResource(R.string.filter_sem_format, "2"),
+        "3" to stringResource(R.string.filter_sem_format, "3"),
+        "4" to stringResource(R.string.filter_sem_format, "4"),
+        "5" to stringResource(R.string.filter_sem_format, "5"),
+        "6" to stringResource(R.string.filter_sem_format, "6"),
+        "7" to stringResource(R.string.filter_sem_format, "7"),
+        "8" to stringResource(R.string.filter_sem_format, "8"),
+        "PDE" to stringResource(R.string.filter_pde)
     )
 
     LazyRow(

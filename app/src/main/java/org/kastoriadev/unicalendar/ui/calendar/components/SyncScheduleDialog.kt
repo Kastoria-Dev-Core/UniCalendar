@@ -37,8 +37,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,16 +62,16 @@ fun SyncScheduleDialog(
     }
 
     val semesterOptions = listOf(
-        "ALL" to "All Semesters (Import Full Timetable)",
-        "1" to "1ο Εξάμηνο (Semester 1)",
-        "2" to "2ο Εξάμηνο (Semester 2)",
-        "3" to "3ο Εξάμηνο (Semester 3)",
-        "4" to "4ο Εξάμηνο (Semester 4)",
-        "5" to "5ο Εξάμηνο (Semester 5)",
-        "6" to "6ο Εξάμηνο (Semester 6)",
-        "7" to "7ο Εξάμηνο (Semester 7)",
-        "8" to "8ο Εξάμηνο (Semester 8)",
-        "PDE" to "ΠΔΕ (Παιδαγωγική & Διδακτική Επάρκεια)"
+        "ALL" to stringResource(R.string.sync_all_semesters_label),
+        "1" to stringResource(R.string.semester_format, "1"),
+        "2" to stringResource(R.string.semester_format, "2"),
+        "3" to stringResource(R.string.semester_format, "3"),
+        "4" to stringResource(R.string.semester_format, "4"),
+        "5" to stringResource(R.string.semester_format, "5"),
+        "6" to stringResource(R.string.semester_format, "6"),
+        "7" to stringResource(R.string.semester_format, "7"),
+        "8" to stringResource(R.string.semester_format, "8"),
+        "PDE" to stringResource(R.string.semester_pde)
     )
 
     AlertDialog(
@@ -84,7 +86,7 @@ fun SyncScheduleDialog(
         },
         title = {
             Text(
-                text = "Sync Timetable",
+                text = stringResource(R.string.dialog_sync_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -95,7 +97,7 @@ fun SyncScheduleDialog(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "Sync your university schedule automatically from the central GitHub repository or import a local document.",
+                    text = stringResource(R.string.dialog_sync_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -110,7 +112,7 @@ fun SyncScheduleDialog(
                         value = semesterOptions.firstOrNull { it.first == selectedSemester }?.second ?: selectedSemester,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Target Semester") },
+                        label = { Text(stringResource(R.string.target_semester_label)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -154,7 +156,7 @@ fun SyncScheduleDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Sync from GitHub Repo",
+                        text = stringResource(R.string.btn_sync_github),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -181,14 +183,14 @@ fun SyncScheduleDialog(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Choose Local .docx / .ics")
+                    Text(text = stringResource(R.string.btn_choose_local_file))
                 }
             }
         },
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(R.string.btn_close))
             }
         }
     )

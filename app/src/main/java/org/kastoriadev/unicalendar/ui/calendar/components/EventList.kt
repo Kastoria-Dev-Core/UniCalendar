@@ -45,13 +45,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kastoriadev.unicalendar.R
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun EventList(
@@ -61,7 +63,10 @@ fun EventList(
     onDeleteEvent: (CalendarEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val dateHeaderFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.getDefault())
+    val locale = LocalConfiguration.current.locales[0]
+    val dateHeaderFormatter = remember(locale) {
+        DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", locale)
+    }
 
     Column(
         modifier = modifier
@@ -81,7 +86,7 @@ fun EventList(
             )
 
             Text(
-                text = "Tap lesson for notes",
+                text = stringResource(R.string.tap_lesson_for_notes),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -97,7 +102,7 @@ fun EventList(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No events scheduled for this day",
+                    text = stringResource(R.string.no_events),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -178,7 +183,7 @@ fun ExpandableEventCard(
                             onClick = {},
                             label = {
                                 Text(
-                                    text = event.type.name,
+                                    text = stringResource(event.type.displayNameRes),
                                     style = MaterialTheme.typography.labelMedium
                                 )
                             },
@@ -193,7 +198,7 @@ fun ExpandableEventCard(
                         if (event.isSynced) {
                             Icon(
                                 imageVector = Icons.Default.Sync,
-                                contentDescription = "Synced from university portal",
+                                contentDescription = stringResource(R.string.content_desc_synced),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(14.dp)
                             )
@@ -231,7 +236,7 @@ fun ExpandableEventCard(
                 IconButton(onClick = { isExpanded = !isExpanded }) {
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (isExpanded) "Collapse details" else "Expand details",
+                        contentDescription = stringResource(if (isExpanded) R.string.content_desc_collapse else R.string.content_desc_expand),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -255,7 +260,7 @@ fun ExpandableEventCard(
 
                     if (event.description.isNotBlank()) {
                         Text(
-                            text = "Description:",
+                            text = stringResource(R.string.field_description),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -284,14 +289,14 @@ fun ExpandableEventCard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Personal Notes:",
+                                    text = stringResource(R.string.field_personal_notes),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
 
                                 Text(
-                                    text = "Edit",
+                                    text = stringResource(R.string.btn_edit),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -308,7 +313,7 @@ fun ExpandableEventCard(
                                 )
                             } else {
                                 Text(
-                                    text = "No notes added yet. Tap to add notes or assignments.",
+                                    text = stringResource(R.string.notes_empty_tap),
                                     style = MaterialTheme.typography.bodySmall,
                                     fontStyle = FontStyle.Italic,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -334,7 +339,7 @@ fun ExpandableEventCard(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Delete", style = MaterialTheme.typography.labelMedium)
+                            Text(text = stringResource(R.string.btn_delete), style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
