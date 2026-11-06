@@ -81,7 +81,13 @@
 
     <!-- Sync Schedule Dialog -->
     <string name="dialog_sync_title">Sync Timetable</string>
+    <string name="dialog_sync_subtitle">Department of Informatics · UOWM</string>
     <string name="dialog_sync_desc">Download the latest timetable and exam schedule published by the Department of Informatics, or import a file.</string>
+    <string name="sync_target_semester_desc">Choose a semester to import, or import the complete timetable.</string>
+    <string name="sync_scope_all_desc">Full timetable: all course lectures and exams will be imported</string>
+    <string name="sync_scope_single_desc">Importing lectures and exams specifically for Semester %1$s</string>
+    <string name="sync_scope_pde_desc">Importing pedagogical module courses (ΠΔΕ)</string>
+    <string name="sync_notice_safe">Your personal notes and manual events will remain untouched</string>
     <string name="target_semester_label">Target Semester</string>
     <string name="sync_all_semesters_label">All Semesters (Import Full Timetable)</string>
     <string name="btn_sync_university">Sync from University</string>
@@ -103,10 +109,13 @@
     <string name="sync_error_unexpected">an unexpected error occurred</string>
 
     <!-- Error report dialog -->
-    <string name="error_sync_title">Sync failed</string>
-    <string name="error_sync_desc">An unexpected error occurred while syncing. Copy the details below and send them to the developers so it can be fixed.</string>
-    <string name="error_crash_title">UniCalendar closed unexpectedly</string>
-    <string name="error_crash_desc">The app closed last time because of the error below. Copy the details and send them to the developers so it can be fixed.</string>
+    <string name="error_sync_title">Sync interrupted</string>
+    <string name="error_sync_desc">Couldn\'t connect to the university server or read the latest schedule. Your saved calendar and personal notes remain safe.</string>
+    <string name="error_crash_title">UniCalendar recovered</string>
+    <string name="error_crash_desc">The app recovered from an unexpected shutdown. Your calendar data and personal notes are safe.</string>
+    <string name="error_data_safe_badge">Your calendar data is safe and untouched</string>
+    <string name="error_technical_section">Technical details (for developers)</string>
+    <string name="error_technical_section_desc">Stack trace, device model, and OS version</string>
     <string name="btn_copy_details">Copy details</string>
     <string name="btn_copied">Copied</string>
 
