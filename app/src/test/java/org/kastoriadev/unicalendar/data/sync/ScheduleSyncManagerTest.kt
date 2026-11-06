@@ -35,6 +35,9 @@ class ScheduleSyncManagerTest {
         private var nextId = 1L
         val events = MutableStateFlow<List<CalendarEvent>>(emptyList())
 
+        /** Thrown by [replaceSyncedEvents] to simulate a failure past the parsers. */
+        var failure: Throwable? = null
+
         override fun getAllEvents(): Flow<List<CalendarEvent>> = events
         override suspend fun getEventById(id: Long) = events.value.firstOrNull { it.id == id }
         override suspend fun insertEvent(event: CalendarEvent): Long {
@@ -60,6 +63,7 @@ class ScheduleSyncManagerTest {
             to: LocalDateTime,
             events: List<CalendarEvent>
         ): Int {
+            failure?.let { throw it }
             fun replaced(event: CalendarEvent) = event.isSynced && event.feed == feed &&
                 !event.startTime.isBefore(from) && !event.startTime.isAfter(to) &&
                 (semester == null || event.semesters.isEmpty() || semester in event.semesters)
@@ -175,6 +179,18 @@ class ScheduleSyncManagerTest {
 
         assertEquals(2, result.lessonCount)
         assertEquals(SyncError.NothingRecognized, result.examsError)
+    }
+
+    @Test
+    fun syncUniversitySchedule_reportsUnexpectedErrorsWithTheirDetails() = runBlocking {
+        // An Error is not an Exception; it has to be reported too instead of crashing the app.
+        repository.failure = NoSuchMethodError("java.util.List.removeFirst")
+
+        val result = manager().syncUniversitySchedule(targetSemester = null)
+
+        val error = (result as SyncResult.Failure).error
+        assertTrue(error is SyncError.Unexpected)
+        assertTrue((error as SyncError.Unexpected).details.startsWith("java.lang.NoSuchMethodError: java.util.List.removeFirst"))
     }
 
     @Test

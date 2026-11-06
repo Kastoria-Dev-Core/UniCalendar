@@ -42,4 +42,10 @@ sealed interface SyncError {
 
     /** The picked file could not be opened or read. */
     data object FileUnreadable : SyncError
+
+    /**
+     * Anything else, such as a bug in a parser. [details] holds the stack trace, so the problem
+     * is shown and can be reported instead of crashing the app.
+     */
+    data class Unexpected(val details: String) : SyncError
 }

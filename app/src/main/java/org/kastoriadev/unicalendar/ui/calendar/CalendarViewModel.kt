@@ -3,6 +3,7 @@ package org.kastoriadev.unicalendar.ui.calendar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +22,7 @@ import org.kastoriadev.unicalendar.domain.model.SyncResult
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
 import org.kastoriadev.unicalendar.util.UiText
+import org.kastoriadev.unicalendar.util.toErrorDetails
 import java.io.InputStream
 import java.time.DayOfWeek
 import java.time.Instant
@@ -365,9 +367,12 @@ class CalendarViewModel(
         if (_uiState.value.isSyncing) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSyncing = true, showSyncDialog = false) }
-            val result = syncManager.syncUniversitySchedule(targetSemester)
-            if (result is SyncResult.Success) recordSuccessfulSync(result.timetableLabel ?: result.examsLabel)
-            _uiState.update { it.copy(isSyncing = false, userMessage = UserMessage(syncMessage(result))) }
+            val result = reportingErrors {
+                syncManager.syncUniversitySchedule(targetSemester).also { result ->
+                    if (result is SyncResult.Success) recordSuccessfulSync(result.timetableLabel ?: result.examsLabel)
+                }
+            }
+            showSyncResult(result)
         }
     }
 
@@ -376,9 +381,39 @@ class CalendarViewModel(
         if (_uiState.value.isSyncing) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSyncing = true, showSyncDialog = false) }
-            val result = syncManager.importFile(openStream, fileName, targetSemester)
-            _uiState.update { it.copy(isSyncing = false, userMessage = UserMessage(syncMessage(result))) }
+            val result = reportingErrors { syncManager.importFile(openStream, fileName, targetSemester) }
+            showSyncResult(result)
         }
+    }
+
+    /** Last line of defence: whatever a sync throws is reported in a dialog instead of crashing the app. */
+    private suspend fun reportingErrors(sync: suspend () -> SyncResult): SyncResult =
+        try {
+            sync()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            SyncResult.Failure(SyncError.Unexpected(e.toErrorDetails()))
+        }
+
+    private fun showSyncResult(result: SyncResult) {
+        val errors = when (result) {
+            is SyncResult.Failure -> listOf(result.error)
+            is SyncResult.Success -> listOfNotNull(result.timetableError, result.examsError)
+        }
+        val unexpected = errors.filterIsInstance<SyncError.Unexpected>().firstOrNull()
+        _uiState.update { current ->
+            current.copy(
+                isSyncing = false,
+                errorReport = unexpected?.let { ErrorReport(ErrorReport.Kind.SYNC, it.details) } ?: current.errorReport,
+                // The dialog already explains a complete failure; a partial one still reports what was imported.
+                userMessage = if (result is SyncResult.Failure && unexpected != null) null else UserMessage(syncMessage(result))
+            )
+        }
+    }
+
+    fun onErrorReportDismissed() {
+        _uiState.update { it.copy(errorReport = null) }
     }
 
     private fun recordSuccessfulSync(label: String?) {
@@ -418,6 +453,7 @@ class CalendarViewModel(
         SyncError.UnsupportedFormat -> UiText.StringResource(R.string.sync_error_unsupported)
         SyncError.NothingRecognized -> UiText.StringResource(R.string.sync_error_nothing_recognized)
         SyncError.FileUnreadable -> UiText.StringResource(R.string.sync_error_file_unreadable)
+        is SyncError.Unexpected -> UiText.StringResource(R.string.sync_error_unexpected)
     }
 
     // endregion

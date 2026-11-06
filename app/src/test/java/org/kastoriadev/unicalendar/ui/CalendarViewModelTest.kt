@@ -23,6 +23,7 @@ import org.kastoriadev.unicalendar.domain.model.EventFeed
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
 import org.kastoriadev.unicalendar.ui.calendar.CalendarViewModel
+import org.kastoriadev.unicalendar.ui.calendar.ErrorReport
 import org.kastoriadev.unicalendar.ui.calendar.MessageAction
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -255,6 +256,25 @@ class CalendarViewModelTest {
         viewModel.onMessageAction(MessageAction.UNDO_DELETE)
         advanceUntilIdle()
         assertEquals(listOf(lesson), viewModel.uiState.value.allEvents)
+    }
+
+    @Test
+    fun importFile_showsUnexpectedErrorsInADialogInsteadOfCrashing() = runTest {
+        val repo = FakeEventRepository()
+        val viewModel = CalendarViewModel(repo, ScheduleSyncManager(repo, ioDispatcher = testDispatcher))
+
+        viewModel.importFile(openStream = { throw StackOverflowError("parser recursion") }, fileName = { "timetable.docx" })
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isSyncing)
+        assertEquals(ErrorReport.Kind.SYNC, state.errorReport?.kind)
+        assertTrue(state.errorReport!!.details.startsWith("java.lang.StackOverflowError: parser recursion"))
+        // The dialog explains it; no snackbar repeats the failure.
+        assertEquals(null, state.userMessage)
+
+        viewModel.onErrorReportDismissed()
+        assertEquals(null, viewModel.uiState.value.errorReport)
     }
 
     @Test

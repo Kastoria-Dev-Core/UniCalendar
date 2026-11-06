@@ -34,6 +34,7 @@ import org.kastoriadev.unicalendar.UniCalendarApp
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.ui.calendar.CalendarScreen
 import org.kastoriadev.unicalendar.ui.calendar.CalendarViewModel
+import org.kastoriadev.unicalendar.ui.common.ErrorReportDialog
 import org.kastoriadev.unicalendar.ui.common.StartupLoadingScreen
 import org.kastoriadev.unicalendar.ui.settings.SettingsScreen
 import org.kastoriadev.unicalendar.ui.theme.UniCalendarTheme
@@ -152,6 +153,12 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
+                    }
+
+                    // Over whichever screen is open, but never over the splash.
+                    val errorReport = uiState.errorReport
+                    if (errorReport != null && !uiState.showStartupSplash) {
+                        ErrorReportDialog(report = errorReport, onDismiss = viewModel::onErrorReportDismissed)
                     }
                 }
             }

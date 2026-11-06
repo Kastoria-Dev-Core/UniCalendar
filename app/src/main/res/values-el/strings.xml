@@ -100,6 +100,13 @@
     <string name="sync_error_unsupported">ο τύπος αρχείου δεν υποστηρίζεται (χρησιμοποιήστε .docx ή .ics)</string>
     <string name="sync_error_nothing_recognized">δεν αναγνωρίστηκαν μαθήματα ή εξετάσεις στο έγγραφο</string>
     <string name="sync_error_file_unreadable">δεν ήταν δυνατό να ανοίξει το επιλεγμένο αρχείο</string>
+    <string name="sync_error_unexpected">παρουσιάστηκε απρόσμενο σφάλμα</string>
+
+    <!-- Error report dialog -->
+    <string name="error_sync_title">Ο συγχρονισμός απέτυχε</string>
+    <string name="error_sync_desc">Παρουσιάστηκε απρόσμενο σφάλμα κατά τον συγχρονισμό. Αντιγράψτε τις παρακάτω λεπτομέρειες και στείλτε τις στους δημιουργούς της εφαρμογής για να διορθωθεί.</string>
+    <string name="btn_copy_details">Αντιγραφή λεπτομερειών</string>
+    <string name="btn_copied">Αντιγράφηκε</string>
 
     <plurals name="count_courses">
         <item quantity="one">%d μάθημα</item>

@@ -100,6 +100,13 @@
     <string name="sync_error_unsupported">this file type is not supported (use .docx or .ics)</string>
     <string name="sync_error_nothing_recognized">no lessons or exams were recognized in the document</string>
     <string name="sync_error_file_unreadable">the selected file could not be opened</string>
+    <string name="sync_error_unexpected">an unexpected error occurred</string>
+
+    <!-- Error report dialog -->
+    <string name="error_sync_title">Sync failed</string>
+    <string name="error_sync_desc">An unexpected error occurred while syncing. Copy the details below and send them to the developers so it can be fixed.</string>
+    <string name="btn_copy_details">Copy details</string>
+    <string name="btn_copied">Copied</string>
 
     <plurals name="count_courses">
         <item quantity="one">%d course</item>

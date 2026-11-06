@@ -14,6 +14,9 @@ import org.kastoriadev.unicalendar.domain.model.EventFeed
 import org.kastoriadev.unicalendar.domain.model.SyncError
 import org.kastoriadev.unicalendar.domain.model.SyncResult
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
+import org.kastoriadev.unicalendar.util.toErrorDetails
+import org.xml.sax.SAXException
+import java.io.IOException
 import java.io.InputStream
 import java.time.LocalTime
 import java.util.concurrent.TimeUnit
@@ -86,9 +89,8 @@ class ScheduleSyncManager(
             store(documentParser.parse(bytes, name), normalizeSemester(targetSemester), null)
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
-            // A damaged document (broken ZIP or XML) must not crash the app.
-            FeedOutcome.Failed(SyncError.NothingRecognized)
+        } catch (e: Throwable) {
+            FeedOutcome.Failed(failureOf(e))
         }
         when (outcome) {
             is FeedOutcome.Failed -> SyncResult.Failure(outcome.error)
@@ -109,10 +111,18 @@ class ScheduleSyncManager(
             FeedOutcome.Failed(e.error)
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
-            // A damaged document (broken ZIP or XML) must not crash the app.
-            FeedOutcome.Failed(SyncError.NothingRecognized)
+        } catch (e: Throwable) {
+            FeedOutcome.Failed(failureOf(e))
         }
+
+    /**
+     * A broken archive or XML is the document's fault and gets the usual message. Anything else,
+     * Errors included, is a bug: its details are passed on to be shown instead of crashing the app.
+     */
+    private fun failureOf(error: Throwable): SyncError = when (error) {
+        is IOException, is SAXException -> SyncError.NothingRecognized
+        else -> SyncError.Unexpected(error.toErrorDetails())
+    }
 
     private suspend fun store(
         result: ScheduleDocumentParser.Result,

@@ -32,6 +32,8 @@ data class CalendarUiState(
     val selectedDateEvents: List<CalendarEvent> = emptyList(),
     val isSyncing: Boolean = false,
     val userMessage: UserMessage? = null,
+    /** An error that would otherwise have crashed the app, shown in a dialog until dismissed. */
+    val errorReport: ErrorReport? = null,
     val lastSyncedAt: LocalDateTime? = null,
     val lastSyncLabel: String? = null,
     val showAddDialog: Boolean = false,
@@ -52,4 +54,12 @@ data class UserMessage(
 
 enum class MessageAction {
     UNDO_DELETE
+}
+
+/** Technical details of a failure, shown so they can be copied and reported. */
+data class ErrorReport(val kind: Kind, val details: String) {
+    enum class Kind {
+        /** A sync or file import failed unexpectedly; the app kept running. */
+        SYNC
+    }
 }
