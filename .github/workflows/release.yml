@@ -95,29 +95,22 @@ jobs:
             echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
           fi
 
-      - name: Build APK
+      - name: Build Release APK
         if: steps.version.outputs.release == 'true'
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || secrets.KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || secrets.KEY_PASSWORD }}
         run: |
-          args="-PversionName=$VERSION -PversionCode=$GITHUB_RUN_NUMBER"
-          if [ -n "$ANDROID_KEYSTORE_PATH" ]; then
-            ./gradlew testReleaseUnitTest assembleRelease $args
-            cp app/build/outputs/apk/release/app-release.apk "UniCalendar-$VERSION.apk"
-          else
-            echo "::warning::No signing secrets set, publishing a debug-signed APK"
-            ./gradlew testDebugUnitTest assembleDebug $args
-            cp app/build/outputs/apk/debug/app-debug.apk "UniCalendar-$VERSION-debug.apk"
-          fi
+          ./gradlew testReleaseUnitTest assembleRelease -PversionName=$VERSION -PversionCode=$GITHUB_RUN_NUMBER --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk "UniCalendar-$VERSION.apk"
 
       - name: Publish GitHub release
         if: steps.version.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$TAG" UniCalendar-*.apk \
+          gh release create "$TAG" "UniCalendar-$VERSION.apk" \
             --target "$GITHUB_SHA" \
             --title "$TITLE" \
             --generate-notes \
