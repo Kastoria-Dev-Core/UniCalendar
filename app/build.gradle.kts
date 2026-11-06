@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -19,14 +21,38 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    val keystoreProperties = Properties()
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+    }
+
+    val storeFilePath: String = System.getenv("KEYSTORE_PATH")
+        ?: keystoreProperties.getProperty("storeFile")
+        ?: "keystore/release.jks"
+    val storePassword = System.getenv("KEYSTORE_PASSWORD")
+        ?: keystoreProperties.getProperty("storePassword")
+    val keyAlias = System.getenv("KEY_ALIAS")
+        ?: keystoreProperties.getProperty("keyAlias")
+    val keyPassword = System.getenv("KEY_PASSWORD")
+        ?: keystoreProperties.getProperty("keyPassword")
+
+    val resolvedStoreFile = file(storeFilePath)
+    val hasReleaseSigning = resolvedStoreFile.exists() &&
+        !storePassword.isNullOrEmpty() &&
+        !keyAlias.isNullOrEmpty() &&
+        !keyPassword.isNullOrEmpty()
+
     signingConfigs {
-        create("release") {
-            storeFile = file("keystore/release.jks")
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "unicalendar123"
-            keyAlias = System.getenv("KEY_ALIAS") ?: "unicalendar"
-            keyPassword = System.getenv("KEY_PASSWORD") ?: "unicalendar123"
-            enableV1Signing = true
-            enableV2Signing = true
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = resolvedStoreFile
+                this.storePassword = storePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+            }
         }
     }
 
@@ -34,7 +60,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

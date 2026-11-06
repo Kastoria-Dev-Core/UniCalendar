@@ -3,14 +3,30 @@
 /build
 /*/build
 .idea
+.vscode
 local.properties
+keystore.properties
+secrets.properties
+*.properties.local
 .DS_Store
+Thumbs.db
 /captures
 .externalNativeBuild
 .cxx
 *.apk
 *.aab
+output_apks/
 .kotlin
 *.docx
 *.doc
+
+# Keystores, signing keys, and certificates
+*.jks
+*.keystore
+*.p12
+*.p8
+*.key
+*.pem
+keystore/
+app/keystore/
 
