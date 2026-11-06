@@ -15,8 +15,8 @@ android {
         applicationId = "org.kastoriadev.unicalendar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.0.9"
+        versionCode = project.findProperty("versionCode")?.toString()?.toIntOrNull() ?: 9
+        versionName = project.findProperty("versionName")?.toString() ?: "1.0.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -27,14 +27,18 @@ android {
         keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
     }
 
-    val storeFilePath: String = System.getenv("KEYSTORE_PATH")
+    val storeFilePath: String = System.getenv("ANDROID_KEYSTORE_PATH")
+        ?: System.getenv("KEYSTORE_PATH")
         ?: keystoreProperties.getProperty("storeFile")
         ?: "keystore/release.jks"
-    val storePassword = System.getenv("KEYSTORE_PASSWORD")
+    val storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+        ?: System.getenv("KEYSTORE_PASSWORD")
         ?: keystoreProperties.getProperty("storePassword")
-    val keyAlias = System.getenv("KEY_ALIAS")
+    val keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+        ?: System.getenv("KEY_ALIAS")
         ?: keystoreProperties.getProperty("keyAlias")
-    val keyPassword = System.getenv("KEY_PASSWORD")
+    val keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+        ?: System.getenv("KEY_PASSWORD")
         ?: keystoreProperties.getProperty("keyPassword")
 
     val candidateStoreFiles = listOf(
