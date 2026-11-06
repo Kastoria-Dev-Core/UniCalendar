@@ -131,3 +131,6 @@ fun UniCalendarTheme(
         )
     }
 }
+
+/** Window background for [darkTheme], used before Compose draws its first frame. */
+fun windowBackgroundColor(darkTheme: Boolean): Color = if (darkTheme) BackgroundDark else BackgroundLight

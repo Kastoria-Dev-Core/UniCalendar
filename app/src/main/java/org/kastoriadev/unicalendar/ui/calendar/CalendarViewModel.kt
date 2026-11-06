@@ -38,6 +38,9 @@ class CalendarViewModel(
 
     private val _uiState = MutableStateFlow(
         CalendarUiState(
+            viewMode = userPreferences?.calendarViewModeName
+                ?.let { name -> CalendarViewMode.entries.firstOrNull { it.name == name } }
+                ?: CalendarViewMode.MONTH,
             themeMode = userPreferences?.themeMode ?: ThemeMode.LIGHT,
             displayLayoutMode = userPreferences?.displayLayoutMode ?: DisplayLayoutMode.SPLIT,
             appLanguage = userPreferences?.appLanguage ?: AppLanguage.GREEK,
@@ -75,7 +78,12 @@ class CalendarViewModel(
         }
     }
 
+    fun onStartupSplashFinished() {
+        _uiState.update { it.copy(showStartupSplash = false) }
+    }
+
     fun setViewMode(mode: CalendarViewMode) {
+        userPreferences?.calendarViewModeName = mode.name
         _uiState.update { it.copy(viewMode = mode) }
     }
 
@@ -91,7 +99,7 @@ class CalendarViewModel(
 
     fun setDisplayLayoutMode(mode: DisplayLayoutMode) {
         userPreferences?.displayLayoutMode = mode
-        _uiState.update { it.copy(displayLayoutMode = mode) }
+        _uiState.update { it.copy(displayLayoutMode = mode, showDayDetailsSheet = false) }
     }
 
     fun openSettings() {
@@ -196,16 +204,24 @@ class CalendarViewModel(
         }
     }
 
+    /** A day was tapped: select it, and in full-screen mode open its details. */
     fun onDateSelected(date: LocalDate) {
-        val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        navigateTo(date, openDetails = _uiState.value.displayLayoutMode == DisplayLayoutMode.FULLSCREEN)
+    }
+
+    /** "Today" only moves the calendar; it does not pop up the day details. */
+    fun onTodaySelected() {
+        navigateTo(LocalDate.now(), openDetails = false)
+    }
+
+    private fun navigateTo(date: LocalDate, openDetails: Boolean) {
         _uiState.update { current ->
-            val shouldOpenSheet = current.displayLayoutMode == DisplayLayoutMode.FULLSCREEN
             current.copy(
                 selectedDate = date,
                 currentMonth = YearMonth.from(date),
-                currentWeekStart = weekStart,
-                selectedDateEvents = current.monthEvents[date] ?: emptyList(),
-                showDayDetailsSheet = shouldOpenSheet
+                currentWeekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
+                selectedDateEvents = current.monthEvents[date].orEmpty(),
+                showDayDetailsSheet = openDetails
             )
         }
     }
@@ -262,11 +278,6 @@ class CalendarViewModel(
                 selectedDateEvents = current.monthEvents[newSelectedDate] ?: emptyList()
             )
         }
-    }
-
-    fun onTodaySelected() {
-        val today = LocalDate.now()
-        onDateSelected(today)
     }
 
     fun setAddDialogVisible(visible: Boolean) {

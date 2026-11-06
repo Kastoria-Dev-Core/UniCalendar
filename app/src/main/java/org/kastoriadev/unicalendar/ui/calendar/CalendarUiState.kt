@@ -12,6 +12,8 @@ import java.time.YearMonth
 import java.time.temporal.TemporalAdjusters
 
 data class CalendarUiState(
+    /** True until the launch animation has played once (kept across rotations). */
+    val showStartupSplash: Boolean = true,
     val viewMode: CalendarViewMode = CalendarViewMode.MONTH,
     val displayLayoutMode: DisplayLayoutMode = DisplayLayoutMode.SPLIT,
     val themeMode: ThemeMode = ThemeMode.LIGHT,

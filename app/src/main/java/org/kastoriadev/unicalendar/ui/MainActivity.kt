@@ -1,10 +1,13 @@
 package org.kastoriadev.unicalendar.ui
 
 import android.content.ContentResolver
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,12 +19,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
@@ -32,6 +35,7 @@ import org.kastoriadev.unicalendar.ui.calendar.CalendarViewModel
 import org.kastoriadev.unicalendar.ui.common.StartupLoadingScreen
 import org.kastoriadev.unicalendar.ui.settings.SettingsScreen
 import org.kastoriadev.unicalendar.ui.theme.UniCalendarTheme
+import org.kastoriadev.unicalendar.ui.theme.windowBackgroundColor
 import org.kastoriadev.unicalendar.util.LocaleHelper
 
 class MainActivity : ComponentActivity() {
@@ -47,7 +51,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        val startsDark = (application as UniCalendarApp).userPreferences.themeMode == ThemeMode.DARK
+        applyWindowTheme(startsDark)
+
         setContent {
             val uiState by viewModel.uiState.collectAsState()
             val context = LocalContext.current
@@ -61,11 +67,17 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
             }
 
-            var isInitialLoading by remember { mutableStateOf(true) }
+            // Status/navigation bar icons follow the app's theme, not the system one.
+            DisposableEffect(isDarkTheme) {
+                applyWindowTheme(isDarkTheme)
+                onDispose {}
+            }
 
             LaunchedEffect(Unit) {
-                delay(850)
-                isInitialLoading = false
+                if (uiState.showStartupSplash) {
+                    delay(STARTUP_SPLASH_MILLIS)
+                    viewModel.onStartupSplashFinished()
+                }
             }
 
             CompositionLocalProvider(
@@ -74,13 +86,13 @@ class MainActivity : ComponentActivity() {
             ) {
                 UniCalendarTheme(darkTheme = isDarkTheme) {
                     AnimatedContent(
-                        targetState = isInitialLoading,
+                        targetState = uiState.showStartupSplash,
                         transitionSpec = {
                             fadeIn(animationSpec = tween(350)) togetherWith fadeOut(animationSpec = tween(280))
                         },
                         label = "StartupSplashTransition"
-                    ) { loading ->
-                        if (loading) {
+                    ) { showSplash ->
+                        if (showSplash) {
                             StartupLoadingScreen()
                         } else {
                             if (uiState.showSettingsScreen) {
@@ -135,6 +147,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun applyWindowTheme(dark: Boolean) {
+        enableEdgeToEdge(
+            statusBarStyle = if (dark) {
+                SystemBarStyle.dark(Color.TRANSPARENT)
+            } else {
+                SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+            },
+            navigationBarStyle = if (dark) {
+                SystemBarStyle.dark(DARK_NAVIGATION_SCRIM)
+            } else {
+                SystemBarStyle.light(LIGHT_NAVIGATION_SCRIM, DARK_NAVIGATION_SCRIM)
+            }
+        )
+        // Shown before Compose draws its first frame; avoids a white flash in dark theme.
+        window.setBackgroundDrawable(ColorDrawable(windowBackgroundColor(dark).toArgb()))
+    }
+
     /** Reads the picked file on a background thread; only the application's resolver is captured. */
     private fun importFile(uri: Uri, targetSemester: String?) {
         val resolver = applicationContext.contentResolver
@@ -146,6 +175,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
+        const val STARTUP_SPLASH_MILLIS = 850L
+
+        // Same scrims androidx.activity uses for three-button navigation bars.
+        val LIGHT_NAVIGATION_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
+        val DARK_NAVIGATION_SCRIM = Color.argb(0x80, 0x1b, 0x1b, 0x1b)
+
         fun queryFileName(resolver: ContentResolver, uri: Uri): String? {
             if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
                 resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->

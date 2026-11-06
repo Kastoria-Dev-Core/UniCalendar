@@ -69,6 +69,13 @@ class UserPreferences(context: Context) {
             prefs.edit().putString(KEY_APP_LANGUAGE, value.name).apply()
         }
 
+    /** Name of the last used calendar view (week / month), restored on the next launch. */
+    var calendarViewModeName: String?
+        get() = prefs.getString(KEY_CALENDAR_VIEW_MODE, null)
+        set(value) {
+            prefs.edit().putString(KEY_CALENDAR_VIEW_MODE, value).apply()
+        }
+
     /** Epoch millis of the last successful university sync, or 0 when never synced. */
     var lastSyncEpochMillis: Long
         get() = prefs.getLong(KEY_LAST_SYNC_MILLIS, 0L)
@@ -91,6 +98,7 @@ class UserPreferences(context: Context) {
         private const val KEY_THEME_MODE = "key_theme_mode"
         private const val KEY_DISPLAY_LAYOUT_MODE = "key_display_layout_mode"
         private const val KEY_APP_LANGUAGE = "key_app_language"
+        private const val KEY_CALENDAR_VIEW_MODE = "key_calendar_view_mode"
         private const val KEY_LAST_SYNC_MILLIS = "key_last_sync_millis"
         private const val KEY_LAST_SYNC_LABEL = "key_last_sync_label"
     }

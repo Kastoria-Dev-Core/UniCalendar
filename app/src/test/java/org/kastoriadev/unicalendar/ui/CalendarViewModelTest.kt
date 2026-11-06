@@ -224,6 +224,20 @@ class CalendarViewModelTest {
     }
 
     @Test
+    fun today_movesTheCalendarWithoutOpeningDayDetails() = runTest {
+        val repo = FakeEventRepository()
+        val viewModel = CalendarViewModel(repo, ScheduleSyncManager(repo))
+        viewModel.setDisplayLayoutMode(DisplayLayoutMode.FULLSCREEN)
+        viewModel.onDateSelected(LocalDate.of(2026, 1, 15))
+        viewModel.dismissDayDetailsSheet()
+
+        viewModel.onTodaySelected()
+
+        assertEquals(LocalDate.now(), viewModel.uiState.value.selectedDate)
+        assertFalse(viewModel.uiState.value.showDayDetailsSheet)
+    }
+
+    @Test
     fun clearAllSchedules_wipesAllEventsAndSelectedSemester() = runTest {
         val repo = FakeEventRepository()
         val syncManager = ScheduleSyncManager(repo)
