@@ -56,13 +56,15 @@ class ScheduleSyncManagerTest {
         override suspend fun deleteEventById(id: Long) {
             events.value = events.value.filterNot { it.id == id }
         }
+        // The timetable and the exam schedule are stored at the same time. Room runs each replace
+        // in a transaction, so the read-modify-write here has to be atomic as well.
         override suspend fun replaceSyncedEvents(
             feed: EventFeed,
             semester: String?,
             from: LocalDateTime,
             to: LocalDateTime,
             events: List<CalendarEvent>
-        ): Int {
+        ): Int = synchronized(this) {
             failure?.let { throw it }
             fun replaced(event: CalendarEvent) = event.isSynced && event.feed == feed &&
                 !event.startTime.isBefore(from) && !event.startTime.isAfter(to) &&
@@ -71,7 +73,7 @@ class ScheduleSyncManagerTest {
             val previous = this.events.value.filter(::replaced)
             val merged = NotesCarryOver.apply(previous, events.map { it.copy(id = 0, feed = feed, isSynced = true) })
             this.events.value = this.events.value.filterNot(::replaced) + merged.map { it.copy(id = nextId++) }
-            return merged.size
+            merged.size
         }
         override suspend fun clearAllEvents() {
             events.value = emptyList()
