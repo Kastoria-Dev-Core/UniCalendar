@@ -26,11 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.EventType
-import org.kastoriadev.unicalendar.ui.theme.ColorDeadline
-import org.kastoriadev.unicalendar.ui.theme.ColorExam
-import org.kastoriadev.unicalendar.ui.theme.ColorGeneral
-import org.kastoriadev.unicalendar.ui.theme.ColorLab
-import org.kastoriadev.unicalendar.ui.theme.ColorLecture
+import org.kastoriadev.unicalendar.ui.theme.LocalEventColors
 import java.time.LocalDate
 
 @Composable
@@ -163,12 +159,6 @@ fun DayCell(
     }
 }
 
-fun getEventTypeColor(type: EventType): Color {
-    return when (type) {
-        EventType.LECTURE -> ColorLecture
-        EventType.LAB -> ColorLab
-        EventType.EXAM -> ColorExam
-        EventType.DEADLINE -> ColorDeadline
-        EventType.GENERAL -> ColorGeneral
-    }
-}
+/** Category colour for the current light/dark theme. */
+@Composable
+fun getEventTypeColor(type: EventType): Color = LocalEventColors.current.forType(type)
