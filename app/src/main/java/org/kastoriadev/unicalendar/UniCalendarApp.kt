@@ -6,6 +6,7 @@ import org.kastoriadev.unicalendar.data.preferences.UserPreferences
 import org.kastoriadev.unicalendar.data.repository.EventRepositoryImpl
 import org.kastoriadev.unicalendar.data.sync.ScheduleSyncManager
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
+import org.kastoriadev.unicalendar.util.CrashLog
 
 class UniCalendarApp : Application() {
 
@@ -23,6 +24,7 @@ class UniCalendarApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashLog.install(this)
         database = AppDatabase.getDatabase(this)
         eventRepository = EventRepositoryImpl(database)
         syncManager = ScheduleSyncManager(eventRepository)

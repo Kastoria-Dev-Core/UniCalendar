@@ -278,6 +278,16 @@ class CalendarViewModelTest {
     }
 
     @Test
+    fun crashFromTheLastRun_isShownOnStart() = runTest {
+        val repo = FakeEventRepository()
+        val report = "java.lang.IllegalStateException: No ActivityResultRegistryOwner was provided"
+
+        val viewModel = CalendarViewModel(repo, ScheduleSyncManager(repo), lastCrash = report)
+
+        assertEquals(ErrorReport(ErrorReport.Kind.CRASH, report), viewModel.uiState.value.errorReport)
+    }
+
+    @Test
     fun semesterFilter_handlesMultiSemesterEventsAndPdeToggle() = runTest {
         val repo = FakeEventRepository()
         val date = LocalDate.of(2026, 9, 2)

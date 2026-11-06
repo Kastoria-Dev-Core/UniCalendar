@@ -39,6 +39,7 @@ import org.kastoriadev.unicalendar.ui.common.StartupLoadingScreen
 import org.kastoriadev.unicalendar.ui.settings.SettingsScreen
 import org.kastoriadev.unicalendar.ui.theme.UniCalendarTheme
 import org.kastoriadev.unicalendar.ui.theme.windowBackgroundColor
+import org.kastoriadev.unicalendar.util.CrashLog
 import org.kastoriadev.unicalendar.util.LocaleHelper
 
 class MainActivity : ComponentActivity() {
@@ -48,7 +49,8 @@ class MainActivity : ComponentActivity() {
         CalendarViewModel.Factory(
             repository = app.eventRepository,
             syncManager = app.syncManager,
-            userPreferences = app.userPreferences
+            userPreferences = app.userPreferences,
+            lastCrash = CrashLog.consume(app)
         )
     }
 

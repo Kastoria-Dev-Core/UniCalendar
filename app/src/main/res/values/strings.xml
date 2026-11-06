@@ -105,6 +105,8 @@
     <!-- Error report dialog -->
     <string name="error_sync_title">Sync failed</string>
     <string name="error_sync_desc">An unexpected error occurred while syncing. Copy the details below and send them to the developers so it can be fixed.</string>
+    <string name="error_crash_title">UniCalendar closed unexpectedly</string>
+    <string name="error_crash_desc">The app closed last time because of the error below. Copy the details and send them to the developers so it can be fixed.</string>
     <string name="btn_copy_details">Copy details</string>
     <string name="btn_copied">Copied</string>
 

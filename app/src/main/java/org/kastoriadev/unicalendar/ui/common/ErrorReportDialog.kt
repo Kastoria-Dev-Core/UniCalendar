@@ -49,8 +49,12 @@ fun ErrorReportDialog(
     val clipboard = LocalClipboardManager.current
     val (title, description) = when (report.kind) {
         ErrorReport.Kind.SYNC -> R.string.error_sync_title to R.string.error_sync_desc
+        ErrorReport.Kind.CRASH -> R.string.error_crash_title to R.string.error_crash_desc
     }
-    val details = remember(report) { "${deviceSummary()}\n\n${report.details}" }
+    // A crash report already names the version and device it came from.
+    val details = remember(report) {
+        if (report.kind == ErrorReport.Kind.CRASH) report.details else "${deviceSummary()}\n\n${report.details}"
+    }
     var copied by remember(report) { mutableStateOf(false) }
 
     AlertDialog(

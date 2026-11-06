@@ -105,6 +105,8 @@
     <!-- Error report dialog -->
     <string name="error_sync_title">Ο συγχρονισμός απέτυχε</string>
     <string name="error_sync_desc">Παρουσιάστηκε απρόσμενο σφάλμα κατά τον συγχρονισμό. Αντιγράψτε τις παρακάτω λεπτομέρειες και στείλτε τις στους δημιουργούς της εφαρμογής για να διορθωθεί.</string>
+    <string name="error_crash_title">Το UniCalendar έκλεισε απρόσμενα</string>
+    <string name="error_crash_desc">Η εφαρμογή έκλεισε την προηγούμενη φορά λόγω του παρακάτω σφάλματος. Αντιγράψτε τις λεπτομέρειες και στείλτε τις στους δημιουργούς της για να διορθωθεί.</string>
     <string name="btn_copy_details">Αντιγραφή λεπτομερειών</string>
     <string name="btn_copied">Αντιγράφηκε</string>
 

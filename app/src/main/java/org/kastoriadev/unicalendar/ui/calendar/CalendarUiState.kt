@@ -60,6 +60,9 @@ enum class MessageAction {
 data class ErrorReport(val kind: Kind, val details: String) {
     enum class Kind {
         /** A sync or file import failed unexpectedly; the app kept running. */
-        SYNC
+        SYNC,
+
+        /** The app crashed the last time it ran. */
+        CRASH
     }
 }

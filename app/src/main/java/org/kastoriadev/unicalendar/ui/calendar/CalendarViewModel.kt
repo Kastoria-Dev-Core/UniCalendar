@@ -35,7 +35,9 @@ import java.time.temporal.TemporalAdjusters
 class CalendarViewModel(
     private val repository: EventRepository,
     private val syncManager: ScheduleSyncManager,
-    private val userPreferences: UserPreferences? = null
+    private val userPreferences: UserPreferences? = null,
+    /** Report of a crash in the previous run, shown once on start. */
+    private val lastCrash: String? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(initialState())
@@ -65,7 +67,8 @@ class CalendarViewModel(
             showSemesterPrompt = prefs?.let { !it.hasCompletedOnboarding } ?: false,
             canDismissSemesterPrompt = prefs?.hasCompletedOnboarding ?: true,
             lastSyncedAt = lastSync,
-            lastSyncLabel = prefs?.lastSyncLabel
+            lastSyncLabel = prefs?.lastSyncLabel,
+            errorReport = lastCrash?.let { ErrorReport(ErrorReport.Kind.CRASH, it) }
         )
     }
 
@@ -461,7 +464,8 @@ class CalendarViewModel(
     class Factory(
         private val repository: EventRepository,
         private val syncManager: ScheduleSyncManager,
-        private val userPreferences: UserPreferences? = null
+        private val userPreferences: UserPreferences? = null,
+        private val lastCrash: String? = null
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -469,7 +473,8 @@ class CalendarViewModel(
                 return CalendarViewModel(
                     repository = repository,
                     syncManager = syncManager,
-                    userPreferences = userPreferences
+                    userPreferences = userPreferences,
+                    lastCrash = lastCrash
                 ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
