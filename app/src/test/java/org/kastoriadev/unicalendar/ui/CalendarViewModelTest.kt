@@ -258,6 +258,31 @@ class CalendarViewModelTest {
     }
 
     @Test
+    fun semesterFilter_handlesMultiSemesterEventsAndPdeToggle() = runTest {
+        val repo = FakeEventRepository()
+        val date = LocalDate.of(2026, 9, 2)
+        repo.eventsFlow.value = listOf(
+            CalendarEvent(id = 1, title = "Τεχνολογία Πολυμέσων", semester = "5,6", startTime = date.atTime(15, 0), endTime = date.atTime(17, 0)),
+            CalendarEvent(id = 2, title = "Εκπαιδευτική Ψυχολογία", semester = "PDE", startTime = date.atTime(9, 0), endTime = date.atTime(11, 0))
+        )
+        val viewModel = CalendarViewModel(repo, ScheduleSyncManager(repo))
+        viewModel.onDateSelected(date)
+        advanceUntilIdle()
+
+        fun visibleTitles() = viewModel.uiState.value.selectedDateEvents.map { it.title }
+
+        viewModel.setSemesterFilter("6")
+        assertEquals(listOf("Τεχνολογία Πολυμέσων"), visibleTitles())
+        viewModel.setSemesterFilter("7")
+        assertTrue(visibleTitles().isEmpty())
+
+        viewModel.setIncludePde(true)
+        assertEquals(listOf("Εκπαιδευτική Ψυχολογία"), visibleTitles())
+        viewModel.setIncludePde(false)
+        assertTrue(visibleTitles().isEmpty())
+    }
+
+    @Test
     fun clearAllSchedules_wipesAllEventsAndSelectedSemester() = runTest {
         val repo = FakeEventRepository()
         val syncManager = ScheduleSyncManager(repo)

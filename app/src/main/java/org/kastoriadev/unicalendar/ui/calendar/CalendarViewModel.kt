@@ -177,6 +177,11 @@ class CalendarViewModel(
         _uiState.update { it.withEvents(semester = target) }
     }
 
+    fun setIncludePde(include: Boolean) {
+        userPreferences?.includePde = include
+        _uiState.update { it.withEvents(pde = include) }
+    }
+
     fun onSemesterConfirmed(semester: String, includePde: Boolean) {
         val target = semester.takeUnless { it.isBlank() || it.equals("ALL", ignoreCase = true) }
         userPreferences?.let { prefs ->

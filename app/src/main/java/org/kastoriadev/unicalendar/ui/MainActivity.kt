@@ -112,10 +112,14 @@ class MainActivity : ComponentActivity() {
                                         themeMode = uiState.themeMode,
                                         displayLayoutMode = uiState.displayLayoutMode,
                                         appLanguage = uiState.appLanguage,
+                                        selectedSemester = uiState.selectedSemester,
+                                        includePde = uiState.includePde,
                                         onBack = viewModel::dismissSettings,
                                         onThemeModeChange = viewModel::setThemeMode,
                                         onDisplayLayoutModeChange = viewModel::setDisplayLayoutMode,
                                         onLanguageChange = viewModel::setAppLanguage,
+                                        onSemesterConfirmed = viewModel::onSemesterConfirmed,
+                                        onIncludePdeChange = viewModel::setIncludePde,
                                         onClearAllSchedules = viewModel::clearAllSchedules
                                     )
                                 } else {

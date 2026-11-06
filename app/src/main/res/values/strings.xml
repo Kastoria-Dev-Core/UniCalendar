@@ -21,6 +21,7 @@
     <string name="btn_done">Done</string>
     <string name="btn_close">Close</string>
     <string name="btn_back">Back</string>
+    <string name="btn_change">Change</string>
     <string name="btn_confirm_calendar">Confirm Calendar</string>
 
     <!-- Settings Screen -->
@@ -37,6 +38,9 @@
     <string name="layout_split_desc">Calendar takes half screen; lesson notes and details appear right below.</string>
     <string name="layout_fullscreen">Full Screen Calendar</string>
     <string name="layout_fullscreen_desc">Calendar takes the full screen; tapping any day opens a tab with its schedule.</string>
+
+    <string name="settings_section_semester">Semester</string>
+    <string name="settings_current_semester">Active calendar</string>
 
     <string name="settings_section_language">Language</string>
     <string name="lang_en">English</string>
@@ -71,7 +75,7 @@
 
     <!-- Onboarding Dialog -->
     <string name="dialog_select_semester_title">Select Your Semester</string>
-    <string name="dialog_select_semester_desc">UniCalendar generates an individual calendar tailored to your semester. You can change your active calendar at any time.</string>
+    <string name="dialog_select_semester_desc">UniCalendar generates an individual calendar tailored to your semester. You can change it at any time from Settings.</string>
     <string name="dialog_select_semester_pde_desc">Add optional pedagogical module lessons to your schedule</string>
     <string name="settings_include_pde">Include ΠΔΕ courses</string>
 

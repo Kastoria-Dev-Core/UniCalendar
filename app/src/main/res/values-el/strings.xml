@@ -21,6 +21,7 @@
     <string name="btn_done">Τέλος</string>
     <string name="btn_close">Κλείσιμο</string>
     <string name="btn_back">Πίσω</string>
+    <string name="btn_change">Αλλαγή</string>
     <string name="btn_confirm_calendar">Επιβεβαίωση Προγράμματος</string>
 
     <!-- Settings Screen -->
@@ -37,6 +38,9 @@
     <string name="layout_split_desc">Το ημερολόγιο καταλαμβάνει τη μισή οθόνη και οι λεπτομέρειες εμφανίζονται ακριβώς από κάτω.</string>
     <string name="layout_fullscreen">Πλήρης οθόνη</string>
     <string name="layout_fullscreen_desc">Το ημερολόγιο καταλαμβάνει όλη την οθόνη. Πατώντας σε μια ημέρα ανοίγουν οι λεπτομέρειες.</string>
+
+    <string name="settings_section_semester">Εξάμηνο</string>
+    <string name="settings_current_semester">Ενεργό πρόγραμμα</string>
 
     <string name="settings_section_language">Γλώσσα</string>
     <string name="lang_en">English</string>

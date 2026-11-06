@@ -2,9 +2,9 @@ package org.kastoriadev.unicalendar.ui.settings
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ViewCompact
 import androidx.compose.material.icons.filled.Warning
@@ -30,13 +34,14 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -44,20 +49,28 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.kastoriadev.unicalendar.BuildConfig
 import org.kastoriadev.unicalendar.R
 import org.kastoriadev.unicalendar.domain.model.AppLanguage
+import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
+import org.kastoriadev.unicalendar.ui.calendar.components.SemesterSelectPromptDialog
+import org.kastoriadev.unicalendar.ui.calendar.components.semesterLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,14 +78,19 @@ fun SettingsScreen(
     themeMode: ThemeMode,
     displayLayoutMode: DisplayLayoutMode,
     appLanguage: AppLanguage,
+    selectedSemester: String?,
+    includePde: Boolean,
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onDisplayLayoutModeChange: (DisplayLayoutMode) -> Unit,
     onLanguageChange: (AppLanguage) -> Unit,
+    onSemesterConfirmed: (semester: String, includePde: Boolean) -> Unit,
+    onIncludePdeChange: (Boolean) -> Unit,
     onClearAllSchedules: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showClearConfirmationDialog by remember { mutableStateOf(false) }
+    var showClearConfirmationDialog by rememberSaveable { mutableStateOf(false) }
+    var showSemesterDialog by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -107,244 +125,157 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Section 1: Appearance (Theme & Calendar Layout Mode)
-            Text(
-                text = stringResource(R.string.tab_appearance),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            // Section 1: Appearance (theme & calendar layout)
+            SectionTitle(stringResource(R.string.tab_appearance))
 
-            // Theme Setting
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
+            SettingsCard {
                 Column(modifier = Modifier.padding(14.dp)) {
-                    Text(
-                        text = stringResource(R.string.settings_section_theme),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                    CardTitle(stringResource(R.string.settings_section_theme))
                     Spacer(modifier = Modifier.height(8.dp))
-
-                    val themes = listOf(
-                        Pair(ThemeMode.LIGHT, stringResource(R.string.theme_light)) to Icons.Default.LightMode,
-                        Pair(ThemeMode.DARK, stringResource(R.string.theme_dark)) to Icons.Default.DarkMode
-                    )
-
-                    themes.forEach { (themePair, icon) ->
-                        val (mode, label) = themePair
-                        val isSelected = themeMode == mode
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable { onThemeModeChange(mode) }
-                                .padding(vertical = 4.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = { onThemeModeChange(mode) }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                    Column(modifier = Modifier.selectableGroup()) {
+                        ChoiceRow(
+                            selected = themeMode == ThemeMode.LIGHT,
+                            label = stringResource(R.string.theme_light),
+                            icon = Icons.Default.LightMode,
+                            onClick = { onThemeModeChange(ThemeMode.LIGHT) }
+                        )
+                        ChoiceRow(
+                            selected = themeMode == ThemeMode.DARK,
+                            label = stringResource(R.string.theme_dark),
+                            icon = Icons.Default.DarkMode,
+                            onClick = { onThemeModeChange(ThemeMode.DARK) }
+                        )
                     }
                 }
             }
 
-            // Display Layout Setting
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
+            SettingsCard {
                 Column(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier
+                        .padding(14.dp)
+                        .selectableGroup(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.settings_section_layout),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
+                    CardTitle(stringResource(R.string.settings_section_layout))
+                    LayoutOption(
+                        selected = displayLayoutMode == DisplayLayoutMode.SPLIT,
+                        icon = Icons.Default.ViewAgenda,
+                        title = stringResource(R.string.layout_split),
+                        description = stringResource(R.string.layout_split_desc),
+                        onClick = { onDisplayLayoutModeChange(DisplayLayoutMode.SPLIT) }
                     )
-
-                    // Split Screen Option
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onDisplayLayoutModeChange(DisplayLayoutMode.SPLIT) },
-                        shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (displayLayoutMode == DisplayLayoutMode.SPLIT)
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        ),
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = if (displayLayoutMode == DisplayLayoutMode.SPLIT)
-                                MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outlineVariant
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = displayLayoutMode == DisplayLayoutMode.SPLIT,
-                                onClick = { onDisplayLayoutModeChange(DisplayLayoutMode.SPLIT) }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = Icons.Default.ViewAgenda,
-                                contentDescription = null,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.layout_split),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = stringResource(R.string.layout_split_desc),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-
-                    // Full Screen Calendar Option
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onDisplayLayoutModeChange(DisplayLayoutMode.FULLSCREEN) },
-                        shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (displayLayoutMode == DisplayLayoutMode.FULLSCREEN)
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        ),
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = if (displayLayoutMode == DisplayLayoutMode.FULLSCREEN)
-                                MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outlineVariant
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = displayLayoutMode == DisplayLayoutMode.FULLSCREEN,
-                                onClick = { onDisplayLayoutModeChange(DisplayLayoutMode.FULLSCREEN) }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = Icons.Default.ViewCompact,
-                                contentDescription = null,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.layout_fullscreen),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = stringResource(R.string.layout_fullscreen_desc),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
+                    LayoutOption(
+                        selected = displayLayoutMode == DisplayLayoutMode.FULLSCREEN,
+                        icon = Icons.Default.ViewCompact,
+                        title = stringResource(R.string.layout_fullscreen),
+                        description = stringResource(R.string.layout_fullscreen_desc),
+                        onClick = { onDisplayLayoutModeChange(DisplayLayoutMode.FULLSCREEN) }
+                    )
                 }
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            // Section 2: Language (No icons, clean options)
-            Text(
-                text = stringResource(R.string.settings_section_language),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            // Section 2: Semester (the onboarding choice, changeable at any time)
+            SectionTitle(stringResource(R.string.settings_section_semester))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
+            SettingsCard {
                 Column(modifier = Modifier.padding(14.dp)) {
-                    val languages = listOf(
-                        AppLanguage.ENGLISH to stringResource(R.string.lang_en),
-                        AppLanguage.GREEK to stringResource(R.string.lang_el)
-                    )
-
-                    languages.forEach { (lang, label) ->
-                        val isSelected = appLanguage == lang
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable { onLanguageChange(lang) }
-                                .padding(vertical = 4.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = { onLanguageChange(lang) }
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.School,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = label,
+                                text = stringResource(R.string.settings_current_semester),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = semesterLabel(selectedSemester),
                                 style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
+                        FilledTonalButton(onClick = { showSemesterDialog = true }) {
+                            Text(text = stringResource(R.string.btn_change))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    val pdeImplied = selectedSemester == CalendarEvent.SEMESTER_PDE
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .toggleable(
+                                value = includePde || pdeImplied,
+                                enabled = !pdeImplied,
+                                role = Role.Switch,
+                                onValueChange = onIncludePdeChange
+                            )
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.settings_include_pde),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (pdeImplied) 0.5f else 1f)
+                            )
+                            Text(
+                                text = stringResource(R.string.dialog_select_semester_pde_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Switch(
+                            checked = includePde || pdeImplied,
+                            enabled = !pdeImplied,
+                            onCheckedChange = null
+                        )
                     }
                 }
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            // Section 3: Schedule Data Management (Reset all imported schedules)
-            Text(
-                text = stringResource(R.string.settings_section_data),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            // Section 3: Language
+            SectionTitle(stringResource(R.string.settings_section_language))
+
+            SettingsCard {
+                Column(
+                    modifier = Modifier
+                        .padding(14.dp)
+                        .selectableGroup()
+                ) {
+                    ChoiceRow(
+                        selected = appLanguage == AppLanguage.ENGLISH,
+                        label = stringResource(R.string.lang_en),
+                        onClick = { onLanguageChange(AppLanguage.ENGLISH) }
+                    )
+                    ChoiceRow(
+                        selected = appLanguage == AppLanguage.GREEK,
+                        label = stringResource(R.string.lang_el),
+                        onClick = { onLanguageChange(AppLanguage.GREEK) }
+                    )
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            // Section 4: Schedule data management
+            SectionTitle(stringResource(R.string.settings_section_data))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -406,47 +337,33 @@ fun SettingsScreen(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            // Section 4: About & Attributions
-            Text(
-                text = stringResource(R.string.tab_about),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            // Section 5: About & attributions
+            SectionTitle(stringResource(R.string.tab_about))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
+            SettingsCard {
                 Column(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Image(
-                                painter = painterResource(R.drawable.app_icon),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                            )
-                            Text(
-                                text = stringResource(R.string.app_name),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                        Image(
+                            painter = painterResource(R.drawable.app_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = stringResource(R.string.app_name),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
                         Text(
                             text = stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
                             style = MaterialTheme.typography.bodySmall,
@@ -478,23 +395,17 @@ fun SettingsScreen(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(R.string.about_libraries_title),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = stringResource(R.string.about_libraries_desc),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.about_libraries_title),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = stringResource(R.string.about_libraries_desc),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
@@ -502,7 +413,20 @@ fun SettingsScreen(
         }
     }
 
-    // Confirmation Alert Dialog before wiping all schedules
+    if (showSemesterDialog) {
+        SemesterSelectPromptDialog(
+            currentSemester = selectedSemester,
+            currentIncludePde = includePde,
+            canDismiss = true,
+            onDismiss = { showSemesterDialog = false },
+            onSemesterConfirmed = { semester, pde ->
+                showSemesterDialog = false
+                onSemesterConfirmed(semester, pde)
+            }
+        )
+    }
+
+    // Confirmation before wiping all schedules
     if (showClearConfirmationDialog) {
         AlertDialog(
             onDismissRequest = { showClearConfirmationDialog = false },
@@ -543,5 +467,126 @@ fun SettingsScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary
+    )
+}
+
+@Composable
+private fun CardTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.Bold
+    )
+}
+
+@Composable
+private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        content = content
+    )
+}
+
+/** A radio row; the whole row is the touch target. */
+@Composable
+private fun ChoiceRow(
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit,
+    icon: ImageVector? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(vertical = 8.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Spacer(modifier = Modifier.width(12.dp))
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun LayoutOption(
+    selected: Boolean,
+    icon: ImageVector,
+    title: String,
+    description: String,
+    onClick: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    // Card(onClick) clips the ripple to the rounded shape.
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics {
+                this.selected = selected
+                role = Role.RadioButton
+            },
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) colors.primaryContainer.copy(alpha = 0.5f) else colors.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = BorderStroke(1.dp, if (selected) colors.primary else colors.outlineVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(selected = selected, onClick = null)
+            Spacer(modifier = Modifier.width(12.dp))
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (selected) colors.primary else colors.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant
+                )
+            }
+        }
     }
 }
