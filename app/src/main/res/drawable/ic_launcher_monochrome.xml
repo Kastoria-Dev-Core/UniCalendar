@@ -1,0 +1,37 @@
+<!-- Single-colour silhouette for themed icons (Android 13+); only the alpha channel is used. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Page outline -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M38,45H70A7,7 0,0 1,77 52V74A7,7 0,0 1,70 81H38A7,7 0,0 1,31 74V52A7,7 0,0 1,38 45Z"
+        android:strokeWidth="3.4"
+        android:strokeColor="#FFFFFFFF" />
+    <!-- "U" -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M47,59V66.5A7,7 0,0 0,61 66.5V59"
+        android:strokeWidth="6"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round" />
+    <!-- Cap -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M42,38L42,46Q54,53 66,46L66,38Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,27L77,36L54,45L31,36Z" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,36L71.5,40L71.5,48.5"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M71.3,47.5H71.7A1.6,1.6 0,0 1,73.3 49.1V52.4A1.6,1.6 0,0 1,71.7 54H71.3A1.6,1.6 0,0 1,69.7 52.4V49.1A1.6,1.6 0,0 1,71.3 47.5Z" />
+</vector>

@@ -358,7 +358,7 @@ private fun AppBarTitle() {
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Image(
-                painter = painterResource(R.drawable.app_icon),
+                painter = painterResource(R.drawable.ic_app_logo),
                 contentDescription = if (showName) null else stringResource(R.string.app_name),
                 modifier = Modifier
                     .size(30.dp)

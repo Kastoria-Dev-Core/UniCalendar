@@ -350,7 +350,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Image(
-                            painter = painterResource(R.drawable.app_icon),
+                            painter = painterResource(R.drawable.ic_app_logo),
                             contentDescription = null,
                             modifier = Modifier
                                 .size(32.dp)
