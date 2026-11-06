@@ -15,8 +15,8 @@ android {
         applicationId = "org.kastoriadev.unicalendar"
         minSdk = 26
         targetSdk = 35
-        versionCode = project.findProperty("versionCode")?.toString()?.toIntOrNull() ?: 10
-        versionName = project.findProperty("versionName")?.toString() ?: "1.1.0"
+        versionCode = project.findProperty("versionCode")?.toString()?.toIntOrNull() ?: 11
+        versionName = project.findProperty("versionName")?.toString() ?: "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
