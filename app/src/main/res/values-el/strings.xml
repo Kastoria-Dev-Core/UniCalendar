@@ -81,13 +81,19 @@
 
     <!-- Sync Schedule Dialog -->
     <string name="dialog_sync_title">Συγχρονισμός Προγράμματος</string>
-    <string name="dialog_sync_desc">Λήψη του τρέχοντος ωρολογίου προγράμματος και του προγράμματος εξετάσεων του Τμήματος Πληροφορικής ή εισαγωγή αρχείου.</string>
+    <string name="dialog_sync_subtitle">Τμήμα Πληροφορικής · ΠΔΜ (Καστοριά)</string>
+    <string name="dialog_sync_desc">Λήψη του τρέχοντος ωρολογίου προγράμματος και εξετάσεων από τον ιστότοπο του Τμήματος, ή εισαγωγή αρχείου.</string>
+    <string name="sync_target_semester_desc">Επιλέξτε εξάμηνο ή εισαγάγετε το πλήρες πρόγραμμα του Τμήματος.</string>
+    <string name="sync_scope_all_desc">Πλήρες πρόγραμμα: θα εισαχθούν τα μαθήματα και οι εξετάσεις όλων των εξαμήνων</string>
+    <string name="sync_scope_single_desc">Εισαγωγή μαθημάτων και εξετάσεων αποκλειστικά για το %1$sο Εξάμηνο</string>
+    <string name="sync_scope_pde_desc">Εισαγωγή μαθημάτων Παιδαγωγικής και Διδακτικής Επάρκειας (ΠΔΕ)</string>
+    <string name="sync_notice_safe">Οι προσωπικές σας σημειώσεις και συμβάντα παραμένουν ασφαλή</string>
     <string name="target_semester_label">Εξάμηνο-στόχος</string>
     <string name="sync_all_semesters_label">Όλα τα Εξάμηνα (Πλήρες Πρόγραμμα)</string>
     <string name="btn_sync_university">Συγχρονισμός από το Τμήμα</string>
     <string name="btn_choose_local_file">Εισαγωγή αρχείου (.docx / .ics)</string>
     <string name="sync_last_synced">Τελευταίος συγχρονισμός: %1$s</string>
-    <string name="sync_never">Δεν έχει γίνει συγχρονισμός</string>
+    <string name="sync_never">Δεν έχει γίνει συγχρονισμός ακόμη</string>
     <string name="sync_success_one">Εισαγωγή: %1$s</string>
     <string name="sync_success_two">Εισαγωγή: %1$s και %2$s</string>
     <string name="sync_nothing_for_semester">Δεν βρέθηκαν μαθήματα ή εξετάσεις για αυτό το εξάμηνο</string>
@@ -103,10 +109,13 @@
     <string name="sync_error_unexpected">παρουσιάστηκε απρόσμενο σφάλμα</string>
 
     <!-- Error report dialog -->
-    <string name="error_sync_title">Ο συγχρονισμός απέτυχε</string>
-    <string name="error_sync_desc">Παρουσιάστηκε απρόσμενο σφάλμα κατά τον συγχρονισμό. Αντιγράψτε τις παρακάτω λεπτομέρειες και στείλτε τις στους δημιουργούς της εφαρμογής για να διορθωθεί.</string>
-    <string name="error_crash_title">Το UniCalendar έκλεισε απρόσμενα</string>
-    <string name="error_crash_desc">Η εφαρμογή έκλεισε την προηγούμενη φορά λόγω του παρακάτω σφάλματος. Αντιγράψτε τις λεπτομέρειες και στείλτε τις στους δημιουργούς της για να διορθωθεί.</string>
+    <string name="error_sync_title">Ο συγχρονισμός διακόπηκε</string>
+    <string name="error_sync_desc">Δεν ήταν δυνατή η επικοινωνία με τον διακομιστή ή η ανάγνωση του αρχείου. Το υπάρχον ημερολόγιο και οι σημειώσεις σας παραμένουν ασφαλή.</string>
+    <string name="error_crash_title">Ανάκτηση UniCalendar</string>
+    <string name="error_crash_desc">Η εφαρμογή ανέκαμψε από απρόσμενο τερματισμό. Τα δεδομένα και οι προσωπικές σας σημειώσεις είναι ασφαλή.</string>
+    <string name="error_data_safe_badge">Το ημερολόγιο και οι σημειώσεις σας είναι ασφαλή</string>
+    <string name="error_technical_section">Τεχνικές λεπτομέρειες (για προγραμματιστές)</string>
+    <string name="error_technical_section_desc">Αναφορά σφάλματος, μοντέλο συσκευής και έκδοση λειτουργικού</string>
     <string name="btn_copy_details">Αντιγραφή λεπτομερειών</string>
     <string name="btn_copied">Αντιγράφηκε</string>
 

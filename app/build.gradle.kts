@@ -15,8 +15,8 @@ android {
         applicationId = "org.kastoriadev.unicalendar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.0.9"
+        versionCode = project.findProperty("versionCode")?.toString()?.toIntOrNull() ?: 10
+        versionName = project.findProperty("versionName")?.toString() ?: "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -27,17 +27,29 @@ android {
         keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
     }
 
-    val storeFilePath: String = System.getenv("KEYSTORE_PATH")
+    val storeFilePath: String = System.getenv("ANDROID_KEYSTORE_PATH")
+        ?: System.getenv("KEYSTORE_PATH")
         ?: keystoreProperties.getProperty("storeFile")
         ?: "keystore/release.jks"
-    val storePassword = System.getenv("KEYSTORE_PASSWORD")
+    val storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+        ?: System.getenv("KEYSTORE_PASSWORD")
         ?: keystoreProperties.getProperty("storePassword")
-    val keyAlias = System.getenv("KEY_ALIAS")
+    val keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+        ?: System.getenv("KEY_ALIAS")
         ?: keystoreProperties.getProperty("keyAlias")
-    val keyPassword = System.getenv("KEY_PASSWORD")
+    val keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+        ?: System.getenv("KEY_PASSWORD")
         ?: keystoreProperties.getProperty("keyPassword")
 
-    val resolvedStoreFile = file(storeFilePath)
+    val candidateStoreFiles = listOf(
+        project.file(storeFilePath),
+        rootProject.file(storeFilePath),
+        rootProject.file("app/$storeFilePath"),
+        project.file("keystore/release.jks"),
+        rootProject.file("app/keystore/release.jks"),
+        rootProject.file("keystore/release.jks")
+    )
+    val resolvedStoreFile = candidateStoreFiles.firstOrNull { it.exists() } ?: project.file(storeFilePath)
     val hasReleaseSigning = resolvedStoreFile.exists() &&
         !storePassword.isNullOrEmpty() &&
         !keyAlias.isNullOrEmpty() &&
@@ -60,8 +72,12 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            if (hasReleaseSigning) {
-                signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                // Fall back to debug signing if release credentials are not provided,
+                // ensuring the produced APK is ALWAYS signed and installable.
+                signingConfigs.getByName("debug")
             }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
