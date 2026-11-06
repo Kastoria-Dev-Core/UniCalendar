@@ -1,0 +1,63 @@
+<!-- In-app logo (top bar, splash, about): the launcher icon's visible area on a rounded tile. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="72dp"
+    android:height="72dp"
+    android:viewportWidth="72"
+    android:viewportHeight="72">
+    <path android:pathData="M18,0H54A18,18 0,0 1,72 18V54A18,18 0,0 1,54 72H18A18,18 0,0 1,0 54V18A18,18 0,0 1,18 0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="-2"
+                android:startY="-10"
+                android:endX="74"
+                android:endY="82">
+                <item
+                    android:color="#FF2196F3"
+                    android:offset="0" />
+                <item
+                    android:color="#FF0D47A1"
+                    android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group
+        android:translateX="-18"
+        android:translateY="-18">
+        <path
+            android:fillColor="#59062A63"
+            android:pathData="M38,47.5H70A7,7 0,0 1,77 54.5V76.5A7,7 0,0 1,70 83.5H38A7,7 0,0 1,31 76.5V54.5A7,7 0,0 1,38 47.5Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M38,45H70A7,7 0,0 1,77 52V74A7,7 0,0 1,70 81H38A7,7 0,0 1,31 74V52A7,7 0,0 1,38 45Z" />
+        <path
+            android:fillColor="#FFD3E5FB"
+            android:pathData="M38,45H70A7,7 0,0 1,77 52V54H31V52A7,7 0,0 1,38 45Z" />
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M47,59V66.5A7,7 0,0 0,61 66.5V59"
+            android:strokeWidth="6"
+            android:strokeColor="#FF0D47A1"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#FF0B2547"
+            android:pathData="M42,38L42,46Q54,53 66,46L66,38Z" />
+        <path
+            android:fillColor="#FF0B2547"
+            android:pathData="M54,27L77,36L54,45L31,36Z" />
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M54,36L71.5,40L71.5,48.5"
+            android:strokeWidth="1.8"
+            android:strokeColor="#FFFFA000"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:fillColor="#FFFFA000"
+            android:pathData="M71.3,47.5H71.7A1.6,1.6 0,0 1,73.3 49.1V52.4A1.6,1.6 0,0 1,71.7 54H71.3A1.6,1.6 0,0 1,69.7 52.4V49.1A1.6,1.6 0,0 1,71.3 47.5Z" />
+        <path
+            android:fillColor="#FFFFA000"
+            android:pathData="M52,36A2,2 0,1 0,56 36A2,2 0,1 0,52 36Z" />
+    </group>
+</vector>

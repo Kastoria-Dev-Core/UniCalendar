@@ -1,5 +1,6 @@
 package org.kastoriadev.unicalendar.data.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -26,5 +27,8 @@ data class EventEntity(
     val endTime: LocalDateTime,
     val type: EventType,
     val sourceUrl: String?,
-    val isSynced: Boolean
+    val isSynced: Boolean,
+    /** [org.kastoriadev.unicalendar.domain.model.EventFeed.key] of the source this event was synced from. */
+    @ColumnInfo(defaultValue = "")
+    val feed: String = ""
 )

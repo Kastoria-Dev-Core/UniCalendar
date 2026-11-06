@@ -71,7 +71,7 @@ fun StartupLoadingScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Image(
-                painter = painterResource(R.drawable.app_icon),
+                painter = painterResource(R.drawable.ic_app_logo),
                 contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier
                     .size(92.dp)

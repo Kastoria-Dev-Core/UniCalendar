@@ -2,6 +2,7 @@ package org.kastoriadev.unicalendar.data.parser
 
 import org.jsoup.Jsoup
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+import org.kastoriadev.unicalendar.domain.model.EventFeed
 import org.kastoriadev.unicalendar.domain.model.EventType
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -181,7 +182,8 @@ class HtmlScheduleParser : ScheduleParser {
                     endTime = LocalDateTime.of(nextDate, endTime),
                     type = type,
                     sourceUrl = sourceUrl,
-                    isSynced = true
+                    isSynced = true,
+                    feed = EventFeed.CALENDAR
                 )
             )
             nextDate = nextDate.plusWeeks(1)

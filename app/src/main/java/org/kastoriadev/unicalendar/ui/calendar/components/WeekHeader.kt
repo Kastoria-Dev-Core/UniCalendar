@@ -1,29 +1,15 @@
 package org.kastoriadev.unicalendar.ui.calendar.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import org.kastoriadev.unicalendar.R
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun WeekHeader(
@@ -34,56 +20,28 @@ fun WeekHeader(
     modifier: Modifier = Modifier
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    val weekEnd = weekStart.plusDays(6)
+    val rangeTitle = remember(weekStart, locale) { weekRangeTitle(weekStart, locale) }
 
-    val rangeTitle = remember(weekStart, weekEnd, locale) {
-        val formatter = DateTimeFormatter.ofPattern("d MMM", locale)
-        val yearFormatter = DateTimeFormatter.ofPattern("yyyy", locale)
-        if (weekStart.year == weekEnd.year) {
-            "${weekStart.format(formatter)} – ${weekEnd.format(formatter)} ${weekStart.format(yearFormatter)}"
-        } else {
-            "${weekStart.format(formatter)} ${weekStart.format(yearFormatter)} – ${weekEnd.format(formatter)} ${weekEnd.format(yearFormatter)}"
-        }
-    }
-
-    Row(
+    CalendarNavigationHeader(
+        title = rangeTitle,
+        titleStyle = MaterialTheme.typography.titleLarge,
+        previousDescription = stringResource(R.string.action_previous_week),
+        nextDescription = stringResource(R.string.action_next_week),
+        onPrevious = onPreviousWeek,
+        onNext = onNextWeek,
+        onTodayClick = onTodayClick,
         modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = rangeTitle,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+    )
+}
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            FilledTonalButton(
-                onClick = onTodayClick,
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(text = stringResource(R.string.action_today), style = MaterialTheme.typography.labelMedium)
-            }
-
-            IconButton(onClick = onPreviousWeek) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.action_previous_week)
-                )
-            }
-
-            IconButton(onClick = onNextWeek) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = stringResource(R.string.action_next_week)
-                )
-            }
-        }
+/** Compact week range: "2 – 8 Nov 2026", "30 Nov – 6 Dec 2026", "28 Dec 2026 – 3 Jan 2027". */
+internal fun weekRangeTitle(weekStart: LocalDate, locale: Locale): String {
+    val weekEnd = weekStart.plusDays(6)
+    val dayMonthYear = DateTimeFormatter.ofPattern("d MMM yyyy", locale)
+    val dayMonth = DateTimeFormatter.ofPattern("d MMM", locale)
+    return when {
+        weekStart.year != weekEnd.year -> "${weekStart.format(dayMonthYear)} – ${weekEnd.format(dayMonthYear)}"
+        weekStart.month != weekEnd.month -> "${weekStart.format(dayMonth)} – ${weekEnd.format(dayMonthYear)}"
+        else -> "${weekStart.dayOfMonth} – ${weekEnd.format(dayMonthYear)}"
     }
 }

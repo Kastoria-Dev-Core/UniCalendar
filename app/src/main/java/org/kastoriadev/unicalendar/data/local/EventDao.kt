@@ -14,9 +14,6 @@ interface EventDao {
     @Query("SELECT * FROM events ORDER BY startTime ASC")
     fun getAllEvents(): Flow<List<EventEntity>>
 
-    @Query("SELECT * FROM events WHERE (:semester IS NULL OR semester = :semester) ORDER BY startTime ASC")
-    fun getEventsBySemester(semester: String?): Flow<List<EventEntity>>
-
     @Query("SELECT * FROM events WHERE startTime >= :start AND startTime < :end ORDER BY startTime ASC")
     fun getEventsBetween(start: LocalDateTime, end: LocalDateTime): Flow<List<EventEntity>>
 
@@ -41,11 +38,37 @@ interface EventDao {
     @Query("DELETE FROM events WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    @Query("DELETE FROM events WHERE isSynced = 1")
-    suspend fun clearSyncedEvents()
+    /**
+     * Synced events of [feed] starting inside [from]..[to]. When [semester] is set, only events
+     * of that semester (semesters are stored comma separated) and semester-less events match.
+     */
+    @Query(
+        """
+        SELECT * FROM events
+        WHERE isSynced = 1 AND feed = :feed AND startTime >= :from AND startTime <= :to
+          AND (:semester IS NULL OR semester = '' OR (',' || semester || ',') LIKE ('%,' || :semester || ',%'))
+        """
+    )
+    suspend fun getSyncedEventsInRange(
+        feed: String,
+        semester: String?,
+        from: LocalDateTime,
+        to: LocalDateTime
+    ): List<EventEntity>
 
-    @Query("DELETE FROM events WHERE isSynced = 1 AND (:semester IS NULL OR semester = :semester)")
-    suspend fun clearSyncedEventsBySemester(semester: String?)
+    @Query(
+        """
+        DELETE FROM events
+        WHERE isSynced = 1 AND feed = :feed AND startTime >= :from AND startTime <= :to
+          AND (:semester IS NULL OR semester = '' OR (',' || semester || ',') LIKE ('%,' || :semester || ',%'))
+        """
+    )
+    suspend fun deleteSyncedEventsInRange(
+        feed: String,
+        semester: String?,
+        from: LocalDateTime,
+        to: LocalDateTime
+    )
 
     @Query("DELETE FROM events")
     suspend fun clearAllEvents()

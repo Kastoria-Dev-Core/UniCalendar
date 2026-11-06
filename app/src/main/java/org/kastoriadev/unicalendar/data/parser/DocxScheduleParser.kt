@@ -1,634 +1,390 @@
 package org.kastoriadev.unicalendar.data.parser
 
+import org.kastoriadev.unicalendar.data.parser.DocxReader.GridCell
+import org.kastoriadev.unicalendar.data.parser.DocxReader.VerticalMerge
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+import org.kastoriadev.unicalendar.domain.model.EventFeed
 import org.kastoriadev.unicalendar.domain.model.EventType
-import org.w3c.dom.Element
-import org.w3c.dom.Node
-import org.xml.sax.InputSource
+import org.w3c.dom.Document
 import java.io.ByteArrayInputStream
 import java.io.InputStream
-import java.io.StringReader
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.temporal.TemporalAdjusters
-import java.util.regex.Pattern
-import java.util.zip.ZipInputStream
-import javax.xml.parsers.DocumentBuilderFactory
 
-class DocxScheduleParser : ScheduleParser {
+/**
+ * Parses the department's weekly timetable (.docx) into dated lessons.
+ *
+ * Two layouts are understood:
+ *  - grid tables: a header row of weekday columns, one row per hour, courses as vertically merged
+ *    cells (the official UOWM layout; days may be split into parallel sub-columns);
+ *  - row tables: one row per lesson with the day, time range and course in separate cells.
+ *
+ * Lessons repeat weekly from the start of the term, skipping Greek university holidays.
+ */
+class DocxScheduleParser(
+    private val today: () -> LocalDate = { LocalDate.now() },
+    private val weeksPerTerm: Int = TERM_WEEKS
+) : ScheduleParser {
 
-    private val timeRangePattern = Pattern.compile("(\\d{1,2}[:.]\\d{2}|\\b\\d{1,2}\\b)\\s*(?:-|–|to)\\s*(\\d{1,2}[:.]\\d{2}|\\b\\d{1,2}\\b)")
-    private val instructorPattern = Pattern.compile("^[A-ZΑ-Ω]\\.\\s*[A-ZΑ-Ωα-ωά-ώ]+")
-    private val locationKeywordPattern = Pattern.compile("(?iu)(αμφιθέατρ|αμφιθεατρ|εργ\\.|εργαστήρ|εργαστηρ|αίθουσ|αιθουσ|^[βb]\\d+|«φίλιππος|πετσάλνικος)")
-
-    override fun parse(content: String, sourceUrl: String?): List<CalendarEvent> {
-        val stream = ByteArrayInputStream(content.toByteArray(Charsets.ISO_8859_1))
-        return parseStream(stream, sourceUrl)
-    }
+    override fun parse(content: String, sourceUrl: String?): List<CalendarEvent> =
+        parseStream(ByteArrayInputStream(content.toByteArray(Charsets.ISO_8859_1)), sourceUrl)
 
     override fun parseStream(stream: InputStream, sourceUrl: String?): List<CalendarEvent> {
-        val documentXml = extractDocumentXml(stream) ?: return emptyList()
-        return parseDocumentXml(documentXml, sourceUrl)
+        val document = DocxReader.readDocument(stream) ?: return emptyList()
+        return parseDocument(document, sourceUrl)
     }
 
-    private fun extractDocumentXml(stream: InputStream): String? {
-        val zip = ZipInputStream(stream)
-        var entry = zip.nextEntry
-        while (entry != null) {
-            if (entry.name.equals("word/document.xml", ignoreCase = true)) {
-                return zip.bufferedReader(Charsets.UTF_8).use { it.readText() }
-            }
-            entry = zip.nextEntry
-        }
-        return null
-    }
+    fun parseDocumentXml(xmlContent: String, sourceUrl: String?): List<CalendarEvent> =
+        parseDocument(DocxReader.parseXml(xmlContent.toByteArray(Charsets.UTF_8)), sourceUrl)
 
-    fun parseDocumentXml(xmlContent: String, sourceUrl: String?): List<CalendarEvent> {
+    internal fun parseDocument(document: Document, sourceUrl: String?): List<CalendarEvent> {
+        val blocks = DocxReader.bodyBlocks(document)
+        val heading = blocks
+            .takeWhile { !DocxReader.isTable(it) }
+            .joinToString(" ") { DocxReader.paragraphText(it) }
+        val termStart = AcademicCalendar.termStart(heading, sourceUrl, today())
+
         val events = mutableListOf<CalendarEvent>()
-        val dbFactory = DocumentBuilderFactory.newInstance()
-        dbFactory.isNamespaceAware = true
-        val dBuilder = dbFactory.newDocumentBuilder()
-        val doc = dBuilder.parse(InputSource(StringReader(xmlContent)))
-        doc.documentElement.normalize()
-
-        val bodyNodes = doc.getElementsByTagNameNS("*", "body")
-        val body = (if (bodyNodes.length > 0) bodyNodes.item(0) as? Element else doc.documentElement) ?: return emptyList()
-
-        val semesterStartDate = detectSemesterStartDate(xmlContent)
-        var currentSemester = "1"
+        var currentSemester = ""
         var currentDay: DayOfWeek? = null
 
-        val children = body.childNodes
-        for (i in 0 until children.length) {
-            val node = children.item(i)
-            if (node.nodeType != Node.ELEMENT_NODE) continue
-            val element = node as Element
-            val localName = element.localName ?: element.nodeName.substringAfter(":")
-
-            when (localName) {
-                "p" -> {
-                    val pText = extractAllText(element).trim()
-                    val detectedSemester = detectSemester(pText)
-                    if (detectedSemester != null) {
-                        currentSemester = detectedSemester
-                    }
-                }
-                "tbl" -> {
-                    val rows = getDirectChildren(element, "tr")
-                    if (rows.isEmpty()) continue
-
-                    // Check if this is a grid timetable (Row 0 has day names as column headers)
-                    val headerRow = rows[0]
-                    val dayColumnMap = detectGridDayColumns(headerRow)
-
-                    if (dayColumnMap.size >= 2) {
-                        // Grid layout (e.g. official Greek university schedule)
-                        val gridEvents = processGridTable(
-                            rows = rows,
-                            dayColumnMap = dayColumnMap,
-                            activeSemester = currentSemester,
-                            sourceUrl = sourceUrl,
-                            baseDate = semesterStartDate
-                        )
-                        events.addAll(gridEvents)
-                    } else {
-                        // Row-based layout (each row defines a course with day & time)
-                        for (r in rows) {
-                            val cells = getDirectChildren(r, "tc")
-                            val cellTexts = cells.map { extractAllText(it).trim() }
-
-                            if (cellTexts.isNotEmpty()) {
-                                val rowEvents = processTableRow(
-                                    cells = cellTexts,
-                                    activeSemester = currentSemester,
-                                    previousDay = currentDay,
-                                    sourceUrl = sourceUrl,
-                                    baseDate = semesterStartDate
-                                )
-                                if (rowEvents.isNotEmpty()) {
-                                    events.addAll(rowEvents)
-                                    currentDay = rowEvents.first().startTime.dayOfWeek
-                                } else {
-                                    val rowText = cellTexts.joinToString(" ")
-                                    val rowDay = detectDayOfWeek(rowText)
-                                    if (rowDay != null) {
-                                        currentDay = rowDay
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        for (block in blocks) {
+            if (DocxReader.isParagraph(block)) {
+                detectSemester(DocxReader.paragraphText(block))?.let { currentSemester = it }
+                continue
             }
-        }
 
-        return events
-    }
+            val rows = DocxReader.tableRows(block).map(DocxReader::rowCells).filter { it.isNotEmpty() }
+            if (rows.isEmpty()) continue
 
-    private fun detectSemesterStartDate(xmlContent: String): LocalDate {
-        val yearPattern = Pattern.compile("\\b(20\\d\\d)\\s*[-/–]\\s*(20\\d\\d)\\b")
-        val yearMatcher = yearPattern.matcher(xmlContent)
-        var startYear: Int? = null
-        var endYear: Int? = null
-        if (yearMatcher.find()) {
-            startYear = yearMatcher.group(1)?.toIntOrNull()
-            endYear = yearMatcher.group(2)?.toIntOrNull()
-        }
-
-        val headerText = normalizeGreek(xmlContent.take(6000))
-        val isWinter = headerText.contains("ΧΕΙΜΕΡ") || headerText.contains("ΧΕ")
-        val isSpring = headerText.contains("ΕΑΡΙΝ") || headerText.contains("EE")
-
-        return when {
-            startYear != null && isWinter -> {
-                // Official Greek university winter semester starts on the first Monday of October
-                LocalDate.of(startYear, 10, 1).with(TemporalAdjusters.firstInMonth(DayOfWeek.MONDAY))
+            val headerIndex = rows.take(HEADER_SEARCH_ROWS).indexOfFirst { row ->
+                dayColumns(row).values.toSet().size >= 2
             }
-            endYear != null && isSpring -> {
-                // Official Greek university spring semester starts mid-February
-                LocalDate.of(endYear, 2, 1).with(TemporalAdjusters.firstInMonth(DayOfWeek.MONDAY)).plusWeeks(1)
-            }
-            else -> {
-                // Default fallback: anchor around current semester
-                LocalDate.now().minusWeeks(6).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-            }
-        }
-    }
-
-    private fun detectGridDayColumns(headerRow: Element): Map<Int, DayOfWeek> {
-        val map = mutableMapOf<Int, DayOfWeek>()
-        val cells = getDirectChildren(headerRow, "tc")
-        for (c in cells.indices) {
-            val text = extractAllText(cells[c])
-            val day = detectDayOfWeek(text)
-            if (day != null) {
-                map[c] = day
-            }
-        }
-        return map
-    }
-
-    private data class PendingGridCourse(
-        val startRow: Int,
-        var endRow: Int,
-        val lines: List<String>,
-        val dayOfWeek: DayOfWeek
-    )
-
-    private fun processGridTable(
-        rows: List<Element>,
-        dayColumnMap: Map<Int, DayOfWeek>,
-        activeSemester: String,
-        sourceUrl: String?,
-        baseDate: LocalDate
-    ): List<CalendarEvent> {
-        val events = mutableListOf<CalendarEvent>()
-        if (rows.size <= 1) return events
-
-        // Parse time slots for each row (Row 1..N)
-        val rowTimeSlots = mutableMapOf<Int, Pair<LocalTime, LocalTime>>()
-        for (r in 1 until rows.size) {
-            val cells = getDirectChildren(rows[r], "tc")
-            if (cells.isNotEmpty()) {
-                val timeCellText = extractAllText(cells[0])
-                val range = extractTimeRange(timeCellText)
-                if (range != null) {
-                    rowTimeSlots[r] = range
-                }
-            }
-        }
-
-        val pendingCourses = mutableMapOf<Int, PendingGridCourse>()
-
-        fun finishCourse(colIdx: Int) {
-            val pending = pendingCourses.remove(colIdx) ?: return
-            val startTime = rowTimeSlots[pending.startRow]?.first ?: return
-            val endTime = rowTimeSlots[pending.endRow]?.second ?: return
-            val (title, prof, loc) = parseCellContent(pending.lines)
-            if (title.isBlank()) return
-
-            val eventType = inferEventType(title, pending.lines.joinToString(" "))
-            val description = if (prof.isNotBlank()) "Διδάσκων: $prof" else ""
-
-            events.addAll(
-                generateRecurringEvents(
-                    title = title,
-                    description = description,
-                    location = loc,
-                    semester = activeSemester,
-                    dayOfWeek = pending.dayOfWeek,
-                    startTime = startTime,
-                    endTime = endTime,
-                    type = eventType,
-                    sourceUrl = sourceUrl,
-                    baseDate = baseDate,
-                    weeks = 16
-                )
-            )
-        }
-
-        for (r in 1 until rows.size) {
-            if (!rowTimeSlots.containsKey(r)) continue
-            val cells = getDirectChildren(rows[r], "tc")
-
-            for ((colIdx, dayOfWeek) in dayColumnMap) {
-                if (colIdx >= cells.size) continue
-                val cell = cells[colIdx]
-
-                val vMergeInfo = getVMergeStatus(cell)
-                when (vMergeInfo) {
-                    VMergeStatus.RESTART -> {
-                        finishCourse(colIdx)
-                        val lines = extractCellLines(cell)
-                        if (lines.isNotEmpty()) {
-                            pendingCourses[colIdx] = PendingGridCourse(
-                                startRow = r,
-                                endRow = r,
-                                lines = lines,
-                                dayOfWeek = dayOfWeek
-                            )
-                        }
-                    }
-                    VMergeStatus.CONTINUE -> {
-                        val pending = pendingCourses[colIdx]
-                        if (pending != null) {
-                            pending.endRow = r
-                        }
-                    }
-                    VMergeStatus.NONE -> {
-                        finishCourse(colIdx)
-                        val lines = extractCellLines(cell)
-                        if (lines.isNotEmpty()) {
-                            pendingCourses[colIdx] = PendingGridCourse(
-                                startRow = r,
-                                endRow = r,
-                                lines = lines,
-                                dayOfWeek = dayOfWeek
-                            )
-                            finishCourse(colIdx)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Finish any remaining open courses at the end of the table
-        for (colIdx in dayColumnMap.keys.toList()) {
-            finishCourse(colIdx)
-        }
-
-        return events
-    }
-
-    private enum class VMergeStatus {
-        NONE,
-        RESTART,
-        CONTINUE
-    }
-
-    private fun getVMergeStatus(cell: Element): VMergeStatus {
-        val tcPrList = getDirectChildren(cell, "tcPr")
-        if (tcPrList.isEmpty()) return VMergeStatus.NONE
-        val tcPr = tcPrList[0]
-        val vMergeList = getDirectChildren(tcPr, "vMerge")
-        if (vMergeList.isEmpty()) return VMergeStatus.NONE
-
-        val vMerge = vMergeList[0]
-        val valAttr = (vMerge.getAttributeNS("http://schemas.openxmlformats.org/wordprocessingml/2006/main", "val")
-            .takeIf { it.isNotBlank() }
-            ?: vMerge.getAttribute("w:val").takeIf { it.isNotBlank() }
-            ?: vMerge.getAttribute("val")).lowercase()
-
-        return if (valAttr == "restart") {
-            VMergeStatus.RESTART
-        } else {
-            VMergeStatus.CONTINUE
-        }
-    }
-
-    private fun extractCellLines(cell: Element): List<String> {
-        val lines = mutableListOf<String>()
-        val paragraphs = getDirectChildren(cell, "p")
-        for (p in paragraphs) {
-            val lineBuilder = StringBuilder()
-            val children = p.childNodes
-            for (i in 0 until children.length) {
-                val node = children.item(i)
-                if (node.nodeType != Node.ELEMENT_NODE) continue
-                val elem = node as Element
-                val tag = elem.localName ?: elem.nodeName.substringAfter(":")
-
-                if (tag.equals("r", ignoreCase = true)) {
-                    val rChildren = elem.childNodes
-                    for (j in 0 until rChildren.length) {
-                        val rChild = rChildren.item(j)
-                        if (rChild.nodeType != Node.ELEMENT_NODE) continue
-                        val rElem = rChild as Element
-                        val rTag = rElem.localName ?: rElem.nodeName.substringAfter(":")
-                        if (rTag.equals("t", ignoreCase = true)) {
-                            lineBuilder.append(rElem.textContent)
-                        } else if (rTag.equals("br", ignoreCase = true)) {
-                            val current = lineBuilder.toString().trim()
-                            if (current.isNotEmpty()) lines.add(current)
-                            lineBuilder.setLength(0)
-                        }
-                    }
-                } else if (tag.equals("br", ignoreCase = true)) {
-                    val current = lineBuilder.toString().trim()
-                    if (current.isNotEmpty()) lines.add(current)
-                    lineBuilder.setLength(0)
-                }
-            }
-            val remaining = lineBuilder.toString().trim()
-            if (remaining.isNotEmpty()) lines.add(remaining)
-        }
-        return lines
-    }
-
-    fun parseCellContent(lines: List<String>): Triple<String, String, String> {
-        if (lines.isEmpty()) return Triple("", "", "")
-
-        var profIdx = -1
-        for (idx in lines.indices) {
-            val line = lines[idx].trim()
-            if (instructorPattern.matcher(line).find() && !locationKeywordPattern.matcher(line).find()) {
-                profIdx = idx
-                break
-            }
-        }
-
-        val titleLines: List<String>
-        val profLines: List<String>
-        val locLines: List<String>
-
-        if (profIdx != -1) {
-            titleLines = lines.subList(0, profIdx)
-            profLines = listOf(lines[profIdx])
-            locLines = lines.subList(profIdx + 1, lines.size)
-        } else {
-            var locIdx = -1
-            for (idx in lines.indices) {
-                if (locationKeywordPattern.matcher(lines[idx]).find()) {
-                    locIdx = idx
-                    break
-                }
-            }
-            if (locIdx != -1) {
-                titleLines = lines.subList(0, locIdx)
-                profLines = emptyList()
-                locLines = lines.subList(locIdx, lines.size)
+            if (headerIndex >= 0) {
+                // A title row above the weekday header ("Α΄ ΕΞΑΜΗΝΟ") overrides the paragraph heading.
+                val tableSemester = rows.take(headerIndex)
+                    .firstNotNullOfOrNull { row -> detectSemester(row.joinToString(" ") { it.text }) }
+                    ?: currentSemester
+                events += parseGrid(rows, headerIndex, tableSemester, sourceUrl, termStart)
             } else {
-                titleLines = lines
-                profLines = emptyList()
-                locLines = emptyList()
+                currentDay = parseRows(rows, currentSemester, currentDay, sourceUrl, termStart, events)
             }
         }
 
-        val title = titleLines.joinToString(" ")
-            .replace("\\s+".toRegex(), " ")
-            .replace(" - ", "-")
-            .trim()
-
-        val prof = profLines.joinToString(" ").replace("\\s+".toRegex(), " ").trim()
-        val loc = locLines.joinToString(" ")
-            .replace("\\s+".toRegex(), " ")
-            .trimEnd('»', ' ')
-            .trim()
-
-        return Triple(title, prof, loc)
+        return events.distinctBy { listOf(it.title, it.startTime, it.endTime, it.semester, it.location) }
     }
 
-    private fun getDirectChildren(parent: Element, localName: String): List<Element> {
-        val result = mutableListOf<Element>()
-        val children = parent.childNodes
-        for (i in 0 until children.length) {
-            val node = children.item(i)
-            if (node.nodeType == Node.ELEMENT_NODE) {
-                val elem = node as Element
-                val name = elem.localName ?: elem.nodeName.substringAfter(":")
-                if (name.equals(localName, ignoreCase = true)) {
-                    result.add(elem)
+    // region Grid layout
+
+    private class OpenCourse(val startRow: Int, var endRow: Int, val lines: List<String>, val day: DayOfWeek)
+
+    private fun parseGrid(
+        rows: List<List<GridCell>>,
+        headerIndex: Int,
+        semester: String,
+        sourceUrl: String?,
+        termStart: LocalDate
+    ): List<CalendarEvent> {
+        val dayByColumn = dayColumns(rows[headerIndex])
+
+        // The hour of each row comes from a non-day cell ("08:00 – 09:00"); some layouts repeat it
+        // in a trailing column, the first one wins.
+        val slots = HashMap<Int, Pair<LocalTime, LocalTime>>()
+        for (r in headerIndex + 1 until rows.size) {
+            rows[r].asSequence()
+                .filter { cell -> cell.columns.none { it in dayByColumn } }
+                .firstNotNullOfOrNull { extractTimeRange(it.text) }
+                ?.let { slots[r] = it }
+        }
+
+        val events = mutableListOf<CalendarEvent>()
+        val open = HashMap<Int, OpenCourse>()
+
+        fun close(column: Int) {
+            val course = open.remove(column) ?: return
+            val start = slots[course.startRow]?.first ?: return
+            val end = slots[course.endRow]?.second ?: return
+            events += lessons(course.lines, course.day, start, end, semester, sourceUrl, termStart)
+        }
+
+        for (r in headerIndex + 1 until rows.size) {
+            if (r !in slots) continue
+            for (cell in rows[r]) {
+                val column = cell.startColumn
+                val day = dayByColumn[column] ?: continue
+                when (cell.verticalMerge) {
+                    VerticalMerge.CONTINUE -> open[column]?.endRow = r
+                    VerticalMerge.RESTART -> {
+                        close(column)
+                        if (cell.lines.isNotEmpty()) open[column] = OpenCourse(r, r, cell.lines, day)
+                    }
+                    VerticalMerge.NONE -> {
+                        close(column)
+                        if (cell.lines.isNotEmpty()) {
+                            open[column] = OpenCourse(r, r, cell.lines, day)
+                            close(column)
+                        }
+                    }
                 }
             }
+        }
+        open.keys.toList().forEach(::close)
+        return events
+    }
+
+    /** Logical grid column -> weekday, for the header cells that name a day. */
+    private fun dayColumns(cells: List<GridCell>): Map<Int, DayOfWeek> {
+        val result = HashMap<Int, DayOfWeek>()
+        for (cell in cells) {
+            val text = cell.text
+            // Day headers are short; dated headers belong to exam grids, not weekly timetables.
+            if (text.length > MAX_DAY_HEADER_LENGTH || DATE_PATTERN.containsMatchIn(text)) continue
+            val day = GreekText.dayOfWeek(text) ?: continue
+            for (column in cell.columns) result[column] = day
         }
         return result
     }
 
-    private fun extractAllText(element: Element): String {
-        val textNodes = element.getElementsByTagNameNS("*", "t")
-        val sb = StringBuilder()
-        for (i in 0 until textNodes.length) {
-            sb.append(textNodes.item(i).textContent).append(" ")
-        }
-        return sb.toString().trim()
-    }
+    // endregion
 
-    private fun processTableRow(
-        cells: List<String>,
-        activeSemester: String,
-        previousDay: DayOfWeek?,
+    // region Row layout
+
+    private fun parseRows(
+        rows: List<List<GridCell>>,
+        semester: String,
+        initialDay: DayOfWeek?,
         sourceUrl: String?,
-        baseDate: LocalDate
-    ): List<CalendarEvent> {
-        val rowText = cells.joinToString(" ").trim()
-        if (rowText.isBlank()) return emptyList()
-
-        val detectedDay = detectDayOfWeek(rowText) ?: previousDay ?: return emptyList()
-        val (startTime, endTime) = extractTimeRange(rowText) ?: return emptyList()
-
-        val title = extractCourseTitle(cells)
-        if (title.isBlank()) return emptyList()
-
-        val location = extractLocation(cells, rowText)
-        val eventType = inferEventType(title, rowText)
-
-        return generateRecurringEvents(
-            title = title,
-            description = "",
-            location = location,
-            semester = activeSemester,
-            dayOfWeek = detectedDay,
-            startTime = startTime,
-            endTime = endTime,
-            type = eventType,
-            sourceUrl = sourceUrl,
-            baseDate = baseDate,
-            weeks = 16
-        )
-    }
-
-    fun detectSemester(text: String): String? {
-        val clean = normalizeGreek(text.replace("\\s+".toRegex(), " ").trim())
-        if (clean.contains("ΠΑΙΔΑΓΩΓΙΚ") || clean.contains("ΔΙΔΑΚΤΙΚ") || clean.contains("ΠΔΕ") || clean.contains("PDE")) {
-            return "PDE"
-        }
-        if (Pattern.compile("\\bΑ\\s*['΄]?\\s*ΕΞΑΜΗΝ").matcher(clean).find() || clean.contains("1Ο ΕΞ") || clean.contains("1O ΕΞ") || clean.contains("ΕΞΑΜΗΝΟ 1")) {
-            return "1"
-        }
-        if (Pattern.compile("\\bΒ\\s*['΄]?\\s*ΕΞΑΜΗΝ").matcher(clean).find() || clean.contains("2Ο ΕΞ") || clean.contains("2O ΕΞ") || clean.contains("ΕΞΑΜΗΝΟ 2")) {
-            return "2"
-        }
-        if (Pattern.compile("\\bΓ\\s*['΄]?\\s*ΕΞΑΜΗΝ").matcher(clean).find() || clean.contains("3Ο ΕΞ") || clean.contains("3O ΕΞ") || clean.contains("ΕΞΑΜΗΝΟ 3")) {
-            return "3"
-        }
-        if (Pattern.compile("\\bΔ\\s*['΄]?\\s*ΕΞΑΜΗΝ").matcher(clean).find() || clean.contains("4Ο ΕΞ") || clean.contains("4O ΕΞ") || clean.contains("ΕΞΑΜΗΝΟ 4")) {
-            return "4"
-        }
-        if (Pattern.compile("\\bΕ\\s*['΄]?\\s*ΕΞΑΜΗΝ").matcher(clean).find() || clean.contains("5Ο ΕΞ") || clean.contains("5O ΕΞ") || clean.contains("ΕΞΑΜΗΝΟ 5")) {
-            return "5"
-        }
-        if (Pattern.compile("\\bΣΤ\\s*['΄]?\\s*ΕΞΑΜΗΝ").matcher(clean).find() || clean.contains("6Ο ΕΞ") || clean.contains("6O ΕΞ") || clean.contains("ΕΞΑΜΗΝΟ 6")) {
-            return "6"
-        }
-        if (Pattern.compile("\\bΖ\\s*['΄]?\\s*ΕΞΑΜΗΝ").matcher(clean).find() || clean.contains("7Ο ΕΞ") || clean.contains("7O ΕΞ") || clean.contains("ΕΞΑΜΗΝΟ 7")) {
-            return "7"
-        }
-        if (Pattern.compile("\\bΗ\\s*['΄]?\\s*ΕΞΑΜΗΝ").matcher(clean).find() || clean.contains("8Ο ΕΞ") || clean.contains("8O ΕΞ") || clean.contains("ΕΞΑΜΗΝΟ 8")) {
-            return "8"
-        }
-        return null
-    }
-
-    private fun normalizeGreek(s: String): String {
-        return s.uppercase()
-            .replace('Ά', 'Α')
-            .replace('Έ', 'Ε')
-            .replace('Ή', 'Η')
-            .replace('Ί', 'Ι')
-            .replace('Ό', 'Ο')
-            .replace('Ύ', 'Υ')
-            .replace('Ώ', 'Ω')
-    }
-
-    fun detectDayOfWeek(text: String): DayOfWeek? {
-        val clean = normalizeGreek(text.replace("\\s+".toRegex(), "").trim())
-        return when {
-            clean.contains("ΔΕΥΤΕΡ") || clean.contains("MONDAY") -> DayOfWeek.MONDAY
-            clean.contains("ΤΡΙΤ") || clean.contains("TUESDAY") -> DayOfWeek.TUESDAY
-            clean.contains("ΤΕΤΑΡΤ") || clean.contains("WEDNESDAY") -> DayOfWeek.WEDNESDAY
-            clean.contains("ΠΕΜΠΤ") || clean.contains("THURSDAY") -> DayOfWeek.THURSDAY
-            clean.contains("ΠΑΡΑΣΚΕΥ") || clean.contains("FRIDAY") -> DayOfWeek.FRIDAY
-            clean.contains("ΣΑΒΒΑΤ") || clean.contains("SATURDAY") -> DayOfWeek.SATURDAY
-            clean.contains("ΚΥΡΙΑΚ") || clean.contains("SUNDAY") -> DayOfWeek.SUNDAY
-            else -> null
-        }
-    }
-
-    private fun extractTimeRange(text: String): Pair<LocalTime, LocalTime>? {
-        // Strip out whitespace within digits or time colons e.g. "0 9 :00 –  1 0:00" -> "09:00–10:00"
-        val normalized = text.replace(" ", "")
-        val matcher = timeRangePattern.matcher(normalized)
-        if (matcher.find()) {
-            val startStr = matcher.group(1) ?: return null
-            val endStr = matcher.group(2) ?: return null
-
-            val start = parseFlexibleTime(startStr) ?: return null
-            val end = parseFlexibleTime(endStr) ?: return null
-            return Pair(start, end)
-        }
-        return null
-    }
-
-    private fun parseFlexibleTime(raw: String): LocalTime? {
-        val clean = raw.trim().replace('.', ':')
-        return try {
-            if (clean.contains(":")) {
-                val parts = clean.split(":")
-                LocalTime.of(parts[0].toInt(), parts[1].toInt())
-            } else {
-                val hour = clean.toInt()
-                LocalTime.of(hour, 0)
+        termStart: LocalDate,
+        out: MutableList<CalendarEvent>
+    ): DayOfWeek? {
+        var currentDay = initialDay
+        for (cells in rows) {
+            val texts = cells.map { it.text }.filter { it.isNotBlank() }
+            if (texts.isEmpty()) continue
+            val rowText = texts.joinToString(" ")
+            val rowDay = texts.firstNotNullOfOrNull { text ->
+                GreekText.dayOfWeek(text)?.takeIf { text.length <= MAX_DAY_HEADER_LENGTH }
             }
-        } catch (e: Exception) {
-            null
+            val day = rowDay ?: currentDay
+            val time = extractTimeRange(rowText)
+            if (day != null && time != null) {
+                val title = extractCourseTitle(texts)
+                if (title.isNotBlank()) {
+                    out += weeklyDates(day, termStart).map { date ->
+                        CalendarEvent(
+                            title = title,
+                            location = extractLocation(texts),
+                            semester = semester,
+                            startTime = date.atTime(time.first),
+                            endTime = date.atTime(time.second),
+                            type = inferLessonType(title),
+                            sourceUrl = sourceUrl,
+                            isSynced = true,
+                            feed = EventFeed.TIMETABLE
+                        )
+                    }
+                }
+            }
+            if (rowDay != null) currentDay = rowDay
         }
+        return currentDay
     }
 
-    private fun extractCourseTitle(cells: List<String>): String {
-        for (cell in cells) {
-            val trimmed = cell.trim()
-            val lower = trimmed.lowercase()
-            if (trimmed.length > 3 &&
-                detectDayOfWeek(trimmed) == null &&
-                !timeRangePattern.matcher(trimmed).find() &&
-                !lower.contains("αίθουσ") &&
-                !lower.contains("αιθουσ") &&
-                !lower.contains("αμφιθέατρ") &&
-                !lower.contains("αμφιθεατρ") &&
-                !lower.contains("room") &&
-                !lower.contains("ημέρα") &&
-                !lower.contains("ημερα") &&
-                !lower.contains("ώρα") &&
-                !lower.contains("ωρα")
-            ) {
-                return trimmed
-            }
-        }
+    private fun extractCourseTitle(cells: List<String>): String =
+        cells.firstOrNull { cell ->
+            val folded = GreekText.fold(cell)
+            cell.length > 3 &&
+                GreekText.dayOfWeek(cell) == null &&
+                extractTimeRange(cell) == null &&
+                NON_TITLE_KEYWORDS.none { folded.contains(it) }
+        }?.collapseWhitespace().orEmpty()
+
+    private fun extractLocation(cells: List<String>): String {
+        cells.firstOrNull { isLocationLine(it) }?.let { return it.collapseWhitespace() }
         return ""
     }
 
-    private fun extractLocation(cells: List<String>, text: String): String {
-        for (cell in cells) {
-            val lower = cell.lowercase()
-            if (lower.contains("αίθουσ") || lower.contains("αιθουσ") ||
-                lower.contains("εργαστήρι") || lower.contains("εργαστηρι") ||
-                lower.contains("αμφιθέατρ") || lower.contains("αμφιθεατρ") ||
-                lower.contains("room") || lower.contains("lab")
-            ) {
-                return cell.trim()
+    // endregion
+
+    // region Cell content
+
+    /**
+     * Splits a timetable cell into (title, instructor, location). Cells list the course title
+     * first (possibly over several lines), then the instructor(s), then the room.
+     */
+    fun parseCellContent(lines: List<String>): Triple<String, String, String> {
+        val cleaned = lines.map { it.collapseWhitespace() }.filter { it.isNotEmpty() }
+        if (cleaned.isEmpty()) return Triple("", "", "")
+
+        val instructorStart = (1 until cleaned.size).firstOrNull { isInstructorLine(cleaned[it]) }
+        val titleLines: List<String>
+        val instructorLines: List<String>
+        val locationLines: List<String>
+        if (instructorStart != null) {
+            var instructorEnd = instructorStart
+            while (instructorEnd < cleaned.size && isInstructorLine(cleaned[instructorEnd])) instructorEnd++
+            titleLines = cleaned.subList(0, instructorStart)
+            instructorLines = cleaned.subList(instructorStart, instructorEnd)
+            locationLines = cleaned.subList(instructorEnd, cleaned.size)
+        } else {
+            val locationStart = (1 until cleaned.size).firstOrNull { isLocationLine(cleaned[it]) }
+            titleLines = if (locationStart != null) cleaned.subList(0, locationStart) else cleaned
+            instructorLines = emptyList()
+            locationLines = if (locationStart != null) cleaned.subList(locationStart, cleaned.size) else emptyList()
+        }
+
+        val title = joinLines(titleLines).replace(" - ", "-")
+        val instructor = instructorLines.joinToString(", ")
+        val location = balanceGuillemets(joinLines(locationLines))
+        return Triple(title, instructor, location)
+    }
+
+    private fun lessons(
+        lines: List<String>,
+        day: DayOfWeek,
+        start: LocalTime,
+        end: LocalTime,
+        semester: String,
+        sourceUrl: String?,
+        termStart: LocalDate
+    ): List<CalendarEvent> {
+        if (!end.isAfter(start)) return emptyList()
+        val (title, instructor, location) = parseCellContent(lines)
+        if (title.isBlank()) return emptyList()
+        val description = if (instructor.isNotBlank()) "$INSTRUCTOR_LABEL $instructor" else ""
+        val type = inferLessonType(title)
+        return weeklyDates(day, termStart).map { date ->
+            CalendarEvent(
+                title = title,
+                description = description,
+                location = location,
+                semester = semester,
+                startTime = date.atTime(start),
+                endTime = date.atTime(end),
+                type = type,
+                sourceUrl = sourceUrl,
+                isSynced = true,
+                feed = EventFeed.TIMETABLE
+            )
+        }
+    }
+
+    private fun weeklyDates(day: DayOfWeek, termStart: LocalDate): List<LocalDate> {
+        val first = termStart.with(TemporalAdjusters.nextOrSame(day))
+        return (0 until weeksPerTerm)
+            .map { first.plusWeeks(it.toLong()) }
+            .filterNot(AcademicCalendar::isNoLectureDay)
+    }
+
+    // endregion
+
+    /** Semester key announced by a heading ("Γ΄ εξάμηνο", "3ο ΕΞΑΜΗΝΟ", "...Παιδαγωγικής Επάρκειας"). */
+    fun detectSemester(text: String): String? {
+        // Headings are short; long paragraphs are notes that may mention other semesters.
+        if (text.isBlank() || text.length > MAX_HEADING_LENGTH) return null
+        val folded = GreekText.fold(text).collapseWhitespace()
+        if ((folded.contains("ΠΑΙΔΑΓΩΓΙΚ") && folded.contains("ΕΠΑΡΚΕΙ")) || PDE_TOKEN.containsMatchIn(folded)) {
+            return CalendarEvent.SEMESTER_PDE
+        }
+        val canonical = GreekText.toGreekLookalikes(folded).replace(GreekText.PRIME_CHARS, "'")
+        NUMERAL_SEMESTER.find(canonical)?.let { match ->
+            GreekText.semesterFromNumeral(match.groupValues[2])?.let { return it }
+        }
+        DIGIT_SEMESTER.find(canonical)?.let { return it.groupValues[2] }
+        SEMESTER_DIGIT.find(canonical)?.let { return it.groupValues[1] }
+        return null
+    }
+
+    fun detectDayOfWeek(text: String): DayOfWeek? = GreekText.dayOfWeek(text)
+
+    companion object {
+        /** Teaching weeks generated for a term (13 lecture weeks plus the Christmas / Easter breaks). */
+        const val TERM_WEEKS = 16
+
+        internal const val INSTRUCTOR_LABEL = "Διδάσκων:"
+
+        private const val HEADER_SEARCH_ROWS = 3
+        private const val MAX_DAY_HEADER_LENGTH = 24
+        private const val MAX_HEADING_LENGTH = 160
+
+        private val TIME_RANGE = Regex("(\\d{1,2}[:.]\\d{2}|\\b\\d{1,2}\\b)(?:-|–|—|to)(\\d{1,2}[:.]\\d{2}|\\b\\d{1,2}\\b)")
+        private val DATE_PATTERN = Regex("\\d{1,2}\\s*[./-]\\s*\\d{1,2}\\s*[./-]\\s*\\d{2,4}")
+        private val PDE_TOKEN = Regex("(^|[^\\p{L}])(ΠΔΕ|PDE)([^\\p{L}]|$)")
+        private val NUMERAL_SEMESTER = Regex("(^|[^Α-Ω])(ΣΤ|[ΑΒΓΔΕΖΗ])\\s*'?\\s*ΕΞΑΜΗΝ")
+        private val DIGIT_SEMESTER = Regex("(^|[^0-9])([1-8])\\s*(?:ΟΥ|Ο)?\\s*ΕΞΑΜΗΝ")
+        private val SEMESTER_DIGIT = Regex("ΕΞΑΜΗΝΟ\\s*([1-8])(?![0-9])")
+        private val INSTRUCTOR_LINE = Regex("^(?:\\p{Lu}\\p{Ll}?\\.\\s?){1,3}\\s?\\p{Lu}\\p{Ll}")
+        private val ROOM_CODE = Regex("^[ΑΒΓΔΕ]\\d{1,2}([\\s,/–-]+[ΑΒΓΔΕ]?\\d{1,2})*$")
+        private val LOCATION_KEYWORDS = listOf(
+            "ΑΜΦΙΘΕΑΤΡ", "ΑΜΦ.", "ΕΡΓ.", "ΕΡΓΑΣΤΗΡ", "ΑΙΘΟΥΣ", "ΦΙΛΙΠΠΟΣ", "ΠΕΤΣΑΛΝΙΚ", "ROOM", "LAB "
+        )
+        private val NON_TITLE_KEYWORDS = listOf("ΑΙΘΟΥΣ", "ΑΜΦΙΘΕΑΤΡ", "ROOM", "ΗΜΕΡΑ", "ΩΡΑ")
+        private val LAB_SUFFIX = Regex("[-–]\\s*ΑΠ(?![\\p{L}])")
+
+        private fun extractTimeRange(text: String): Pair<LocalTime, LocalTime>? {
+            val normalized = text.replace(Regex("\\s+"), "")
+            val match = TIME_RANGE.find(normalized) ?: return null
+            val start = parseFlexibleTime(match.groupValues[1]) ?: return null
+            val end = parseFlexibleTime(match.groupValues[2]) ?: return null
+            return start to end
+        }
+
+        private fun parseFlexibleTime(raw: String): LocalTime? {
+            val clean = raw.trim().replace('.', ':')
+            return try {
+                if (clean.contains(':')) {
+                    val (hour, minute) = clean.split(':')
+                    LocalTime.of(hour.toInt(), minute.toInt())
+                } else {
+                    LocalTime.of(clean.toInt(), 0)
+                }
+            } catch (_: Exception) {
+                null
             }
         }
-        val roomRegex = "(?iu)(?:αίθουσα|αιθουσα|εργαστήριο|εργαστηριο|αμφιθέατρο|αμφιθεατρο|room|lab)\\s*[A-Za-z0-9._-]+".toRegex()
-        val match = roomRegex.find(text)
-        return match?.value?.trim() ?: ""
-    }
 
-    private fun inferEventType(title: String, text: String): EventType {
-        val combined = "$title $text".lowercase()
-        return when {
-            combined.contains("exam") || combined.contains("εξέταση") || combined.contains("εξεταστική") -> EventType.EXAM
-            combined.contains("lab") || combined.contains("(ε)") || combined.contains("(απ)") || combined.contains("εργαστήριο") || combined.contains("εργαστηριακό") -> EventType.LAB
-            combined.contains("deadline") || combined.contains("προθεσμία") || combined.contains("παράδοση") -> EventType.DEADLINE
-            combined.contains("lecture") || combined.contains("(θ)") || combined.contains("διάλεξη") || combined.contains("θεωρία") -> EventType.LECTURE
-            else -> EventType.LECTURE
-        }
-    }
+        private fun isInstructorLine(line: String): Boolean =
+            INSTRUCTOR_LINE.containsMatchIn(line) && !isLocationLine(line)
 
-    private fun generateRecurringEvents(
-        title: String,
-        description: String,
-        location: String,
-        semester: String,
-        dayOfWeek: DayOfWeek,
-        startTime: LocalTime,
-        endTime: LocalTime,
-        type: EventType,
-        sourceUrl: String?,
-        baseDate: LocalDate,
-        weeks: Int
-    ): List<CalendarEvent> {
-        val events = mutableListOf<CalendarEvent>()
-        var nextDate = baseDate.with(TemporalAdjusters.nextOrSame(dayOfWeek))
-
-        for (i in 0 until weeks) {
-            events.add(
-                CalendarEvent(
-                    title = title,
-                    description = description,
-                    location = location,
-                    semester = semester,
-                    startTime = LocalDateTime.of(nextDate, startTime),
-                    endTime = LocalDateTime.of(nextDate, endTime),
-                    type = type,
-                    sourceUrl = sourceUrl,
-                    isSynced = true
-                )
-            )
-            nextDate = nextDate.plusWeeks(1)
+        private fun isLocationLine(line: String): Boolean {
+            val folded = GreekText.fold(line)
+            if (LOCATION_KEYWORDS.any { folded.contains(it) }) return true
+            return ROOM_CODE.matches(GreekText.toGreekLookalikes(folded).trim())
         }
 
-        return events
+        /** Joins wrapped cell lines, gluing words that were hyphenated across a line break. */
+        private fun joinLines(lines: List<String>): String {
+            val builder = StringBuilder()
+            for (line in lines) {
+                if (builder.isNotEmpty() && !(builder.endsWith("-") || builder.endsWith("–"))) builder.append(' ')
+                builder.append(line)
+            }
+            return builder.toString().collapseWhitespace()
+        }
+
+        /** Drops a stray closing «» quote (e.g. "Β11»") and closes an unterminated one. */
+        private fun balanceGuillemets(text: String): String {
+            val opens = text.count { it == '«' }
+            val closes = text.count { it == '»' }
+            val result = when {
+                opens == 0 && closes > 0 -> text.replace("»", "")
+                opens > closes -> text + "»".repeat(opens - closes)
+                else -> text
+            }
+            return result.trim()
+        }
+
+        internal fun inferLessonType(title: String): EventType {
+            val folded = GreekText.fold(title)
+            val isLab = folded.contains("ΕΡΓΑΣΤΗΡ") ||
+                folded.contains("(ΑΠ)") ||
+                LAB_SUFFIX.containsMatchIn(folded) ||
+                folded.contains("(Ε)") ||
+                folded.contains("(E)") ||
+                folded.contains("LAB")
+            return if (isLab) EventType.LAB else EventType.LECTURE
+        }
     }
 }

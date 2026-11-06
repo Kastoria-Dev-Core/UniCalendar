@@ -8,18 +8,29 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import org.kastoriadev.unicalendar.domain.model.EventType
 
+// Every surface role is set explicitly: unset roles fall back to Material's lavender baseline,
+// which used to tint dialogs, sheets, menus and snackbars purple.
 private val DarkColorScheme = darkColorScheme(
     primary = BlueSecondary,
     onPrimary = SurfaceLight,
     primaryContainer = PrimaryContainerDark,
     onPrimaryContainer = OnPrimaryContainerDark,
+    inversePrimary = InversePrimaryDark,
     secondary = BluePrimary,
     onSecondary = SurfaceLight,
     secondaryContainer = SecondaryContainerDark,
     onSecondaryContainer = OnSecondaryContainerDark,
+    tertiary = TertiaryDark,
+    onTertiary = Color(0xFF00382F),
+    tertiaryContainer = TertiaryContainerDark,
+    onTertiaryContainer = OnTertiaryContainerDark,
     background = BackgroundDark,
     onBackground = TextPrimaryDark,
     surface = SurfaceDark,
@@ -27,8 +38,17 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = SurfaceVariantDark,
     onSurfaceVariant = TextSecondaryDark,
     surfaceTint = Color.Transparent,
+    inverseSurface = InverseSurfaceDark,
+    inverseOnSurface = InverseOnSurfaceDark,
     outline = OutlineDark,
-    outlineVariant = OutlineVariantDark
+    outlineVariant = OutlineVariantDark,
+    surfaceBright = SurfaceBrightDark,
+    surfaceDim = BackgroundDark,
+    surfaceContainerLowest = SurfaceContainerLowestDark,
+    surfaceContainerLow = SurfaceContainerLowDark,
+    surfaceContainer = SurfaceContainerDark,
+    surfaceContainerHigh = SurfaceContainerHighDark,
+    surfaceContainerHighest = SurfaceContainerHighestDark
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -36,10 +56,15 @@ private val LightColorScheme = lightColorScheme(
     onPrimary = SurfaceLight,
     primaryContainer = PrimaryContainerLight,
     onPrimaryContainer = OnPrimaryContainerLight,
+    inversePrimary = InversePrimaryLight,
     secondary = BlueSecondary,
     onSecondary = SurfaceLight,
     secondaryContainer = SecondaryContainerLight,
     onSecondaryContainer = OnSecondaryContainerLight,
+    tertiary = TertiaryLight,
+    onTertiary = SurfaceLight,
+    tertiaryContainer = TertiaryContainerLight,
+    onTertiaryContainer = OnTertiaryContainerLight,
     background = BackgroundLight,
     onBackground = TextPrimaryLight,
     surface = SurfaceLight,
@@ -47,9 +72,41 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = SurfaceVariantLight,
     onSurfaceVariant = TextSecondaryLight,
     surfaceTint = Color.Transparent,
+    inverseSurface = InverseSurfaceLight,
+    inverseOnSurface = InverseOnSurfaceLight,
     outline = OutlineLight,
-    outlineVariant = OutlineVariantLight
+    outlineVariant = OutlineVariantLight,
+    surfaceBright = SurfaceLight,
+    surfaceDim = SurfaceDimLight,
+    surfaceContainerLowest = SurfaceLight,
+    surfaceContainerLow = SurfaceContainerLowLight,
+    surfaceContainer = SurfaceContainerLight,
+    surfaceContainerHigh = SurfaceContainerHighLight,
+    surfaceContainerHighest = SurfaceContainerHighestLight
 )
+
+/** Category colours tuned for the active light/dark theme. */
+@Immutable
+data class EventColors(
+    val lecture: Color,
+    val lab: Color,
+    val exam: Color,
+    val deadline: Color,
+    val general: Color
+) {
+    fun forType(type: EventType): Color = when (type) {
+        EventType.LECTURE -> lecture
+        EventType.LAB -> lab
+        EventType.EXAM -> exam
+        EventType.DEADLINE -> deadline
+        EventType.GENERAL -> general
+    }
+}
+
+private val LightEventColors = EventColors(ColorLecture, ColorLab, ColorExam, ColorDeadline, ColorGeneral)
+private val DarkEventColors = EventColors(ColorLectureDark, ColorLabDark, ColorExamDark, ColorDeadlineDark, ColorGeneralDark)
+
+val LocalEventColors = staticCompositionLocalOf { LightEventColors }
 
 @Composable
 fun UniCalendarTheme(
@@ -66,9 +123,14 @@ fun UniCalendarTheme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalEventColors provides if (darkTheme) DarkEventColors else LightEventColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }
+
+/** Window background for [darkTheme], used before Compose draws its first frame. */
+fun windowBackgroundColor(darkTheme: Boolean): Color = if (darkTheme) BackgroundDark else BackgroundLight

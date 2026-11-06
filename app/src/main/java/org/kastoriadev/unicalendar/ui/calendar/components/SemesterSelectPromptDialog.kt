@@ -1,7 +1,5 @@
 package org.kastoriadev.unicalendar.ui.calendar.components
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +9,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,15 +28,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.kastoriadev.unicalendar.R
+import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 
 @Composable
 fun SemesterSelectPromptDialog(
@@ -45,22 +48,15 @@ fun SemesterSelectPromptDialog(
     onDismiss: () -> Unit,
     onSemesterConfirmed: (semester: String, includePde: Boolean) -> Unit
 ) {
-    var selectedSemester by remember {
-        mutableStateOf(currentSemester?.takeIf { it != "ALL" } ?: "1")
+    var selectedSemester by rememberSaveable {
+        mutableStateOf(currentSemester?.takeIf { it in CourseSemesterKeys } ?: "1")
     }
-    var includePde by remember { mutableStateOf(currentIncludePde) }
-
-    val semesters = listOf(
-        "1" to stringResource(R.string.semester_format, "1"),
-        "2" to stringResource(R.string.semester_format, "2"),
-        "3" to stringResource(R.string.semester_format, "3"),
-        "4" to stringResource(R.string.semester_format, "4"),
-        "5" to stringResource(R.string.semester_format, "5"),
-        "6" to stringResource(R.string.semester_format, "6"),
-        "7" to stringResource(R.string.semester_format, "7"),
-        "8" to stringResource(R.string.semester_format, "8"),
-        "PDE" to stringResource(R.string.semester_pde)
-    )
+    // ΠΔΕ is taken alongside a semester, so it is the checkbox below the list rather than an
+    // entry in it. A ΠΔΕ-only choice from an earlier version carries over as a ticked checkbox.
+    var includePde by rememberSaveable {
+        mutableStateOf(currentIncludePde || currentSemester.equals(CalendarEvent.SEMESTER_PDE, ignoreCase = true))
+    }
+    val semesters = CourseSemesterKeys.map { key -> key to semesterLabel(key) }
 
     AlertDialog(
         onDismissRequest = {
@@ -97,27 +93,30 @@ fun SemesterSelectPromptDialog(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                semesters.forEach { (key, label) ->
-                    val isSelected = selectedSemester.equals(key, ignoreCase = true)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { selectedSemester = key }
-                            .padding(vertical = 4.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { selectedSemester = key }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
+                Column(modifier = Modifier.selectableGroup()) {
+                    semesters.forEach { (key, label) ->
+                        val isSelected = selectedSemester.equals(key, ignoreCase = true)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .selectable(
+                                    selected = isSelected,
+                                    role = Role.RadioButton,
+                                    onClick = { selectedSemester = key }
+                                )
+                                .padding(vertical = 4.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = isSelected, onClick = null)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
 
@@ -125,30 +124,26 @@ fun SemesterSelectPromptDialog(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // PDE Inclusion Checkbox
-                val pdeDisabled = selectedSemester == "PDE"
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable(enabled = !pdeDisabled) {
-                            includePde = !includePde
-                        }
+                        .toggleable(
+                            value = includePde,
+                            role = Role.Checkbox,
+                            onValueChange = { includePde = it }
+                        )
                         .padding(vertical = 4.dp, horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Checkbox(
-                        checked = includePde || pdeDisabled,
-                        enabled = !pdeDisabled,
-                        onCheckedChange = { includePde = it }
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Checkbox(checked = includePde, onCheckedChange = null)
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
                             text = stringResource(R.string.settings_include_pde),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
-                            color = if (pdeDisabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = stringResource(R.string.dialog_select_semester_pde_desc),
@@ -160,11 +155,7 @@ fun SemesterSelectPromptDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    onSemesterConfirmed(selectedSemester, includePde)
-                }
-            ) {
+            Button(onClick = { onSemesterConfirmed(selectedSemester, includePde) }) {
                 Text(text = stringResource(R.string.btn_confirm_calendar))
             }
         },

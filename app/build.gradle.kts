@@ -13,8 +13,8 @@ android {
         applicationId = "org.kastoriadev.unicalendar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.0.7"
+        versionCode = 9
+        versionName = "1.0.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -92,6 +92,9 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
+    // Android's org.json is a stub in local unit tests; use the real implementation there.
+    testImplementation(libs.org.json)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

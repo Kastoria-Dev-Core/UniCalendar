@@ -1,45 +1,24 @@
 package org.kastoriadev.unicalendar.data.repository
 
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import org.kastoriadev.unicalendar.data.local.EventDao
+import org.kastoriadev.unicalendar.data.local.AppDatabase
 import org.kastoriadev.unicalendar.data.local.EventEntity
+import org.kastoriadev.unicalendar.data.sync.NotesCarryOver
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+import org.kastoriadev.unicalendar.domain.model.EventFeed
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.YearMonth
 
 class EventRepositoryImpl(
-    private val dao: EventDao
+    private val database: AppDatabase
 ) : EventRepository {
+
+    private val dao = database.eventDao()
 
     override fun getAllEvents(): Flow<List<CalendarEvent>> {
         return dao.getAllEvents().map { entities ->
-            entities.map { it.toDomain() }
-        }
-    }
-
-    override fun getEventsBySemester(semester: String?): Flow<List<CalendarEvent>> {
-        return dao.getEventsBySemester(semester).map { entities ->
-            entities.map { it.toDomain() }
-        }
-    }
-
-    override fun getEventsForDate(date: LocalDate): Flow<List<CalendarEvent>> {
-        val startOfDay = date.atStartOfDay()
-        val endOfDay = date.atTime(LocalTime.MAX)
-        return dao.getEventsBetween(startOfDay, endOfDay).map { entities ->
-            entities.map { it.toDomain() }
-        }
-    }
-
-    override fun getEventsForMonth(year: Int, month: Int): Flow<List<CalendarEvent>> {
-        val yearMonth = YearMonth.of(year, month)
-        val startOfMonth = yearMonth.atDay(1).atStartOfDay()
-        val endOfMonth = yearMonth.atEndOfMonth().atTime(LocalTime.MAX)
-        return dao.getEventsBetween(startOfMonth, endOfMonth).map { entities ->
             entities.map { it.toDomain() }
         }
     }
@@ -72,12 +51,19 @@ class EventRepositoryImpl(
         dao.deleteById(id)
     }
 
-    override suspend fun clearSyncedEvents() {
-        dao.clearSyncedEvents()
-    }
-
-    override suspend fun clearSyncedEventsBySemester(semester: String?) {
-        dao.clearSyncedEventsBySemester(semester)
+    override suspend fun replaceSyncedEvents(
+        feed: EventFeed,
+        semester: String?,
+        from: LocalDateTime,
+        to: LocalDateTime,
+        events: List<CalendarEvent>
+    ): Int = database.withTransaction {
+        val previous = dao.getSyncedEventsInRange(feed.key, semester, from, to).map { it.toDomain() }
+        val incoming = events.map { it.copy(id = 0, feed = feed, isSynced = true) }
+        val merged = NotesCarryOver.apply(previous, incoming)
+        dao.deleteSyncedEventsInRange(feed.key, semester, from, to)
+        dao.insertAll(merged.map { it.toEntity() })
+        merged.size
     }
 
     override suspend fun clearAllEvents() {
@@ -95,7 +81,8 @@ class EventRepositoryImpl(
         endTime = endTime,
         type = type,
         sourceUrl = sourceUrl,
-        isSynced = isSynced
+        isSynced = isSynced,
+        feed = EventFeed.fromKey(feed)
     )
 
     private fun CalendarEvent.toEntity(): EventEntity = EventEntity(
@@ -109,6 +96,7 @@ class EventRepositoryImpl(
         endTime = endTime,
         type = type,
         sourceUrl = sourceUrl,
-        isSynced = isSynced
+        isSynced = isSynced,
+        feed = feed.key
     )
 }

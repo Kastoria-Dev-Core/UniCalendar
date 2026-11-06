@@ -19,9 +19,12 @@ import org.kastoriadev.unicalendar.data.sync.ScheduleSyncManager
 import org.kastoriadev.unicalendar.domain.model.AppLanguage
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
+import org.kastoriadev.unicalendar.domain.model.EventFeed
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
 import org.kastoriadev.unicalendar.ui.calendar.CalendarViewModel
+import org.kastoriadev.unicalendar.ui.calendar.ErrorReport
+import org.kastoriadev.unicalendar.ui.calendar.MessageAction
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -34,18 +37,29 @@ class CalendarViewModelTest {
         val eventsFlow = MutableStateFlow<List<CalendarEvent>>(emptyList())
 
         override fun getAllEvents(): Flow<List<CalendarEvent>> = eventsFlow
-        override fun getEventsBySemester(semester: String?): Flow<List<CalendarEvent>> = eventsFlow
-        override fun getEventsForDate(date: LocalDate): Flow<List<CalendarEvent>> = eventsFlow
-        override fun getEventsForMonth(year: Int, month: Int): Flow<List<CalendarEvent>> = eventsFlow
-        override suspend fun getEventById(id: Long): CalendarEvent? = null
-        override suspend fun insertEvent(event: CalendarEvent): Long = 1L
-        override suspend fun insertEvents(events: List<CalendarEvent>): List<Long> = emptyList()
-        override suspend fun updateEvent(event: CalendarEvent) {}
-        override suspend fun updateNotes(id: Long, notes: String) {}
-        override suspend fun deleteEvent(event: CalendarEvent) {}
-        override suspend fun deleteEventById(id: Long) {}
-        override suspend fun clearSyncedEvents() {}
-        override suspend fun clearSyncedEventsBySemester(semester: String?) {}
+        override suspend fun getEventById(id: Long): CalendarEvent? = eventsFlow.value.firstOrNull { it.id == id }
+        override suspend fun insertEvent(event: CalendarEvent): Long {
+            eventsFlow.value = (eventsFlow.value.filterNot { it.id == event.id } + event).sortedBy { it.startTime }
+            return event.id
+        }
+        override suspend fun insertEvents(events: List<CalendarEvent>): List<Long> = events.map { insertEvent(it) }
+        override suspend fun updateEvent(event: CalendarEvent) {
+            insertEvent(event)
+        }
+        override suspend fun updateNotes(id: Long, notes: String) {
+            eventsFlow.value = eventsFlow.value.map { if (it.id == id) it.copy(notes = notes) else it }
+        }
+        override suspend fun deleteEvent(event: CalendarEvent) = deleteEventById(event.id)
+        override suspend fun deleteEventById(id: Long) {
+            eventsFlow.value = eventsFlow.value.filterNot { it.id == id }
+        }
+        override suspend fun replaceSyncedEvents(
+            feed: EventFeed,
+            semester: String?,
+            from: LocalDateTime,
+            to: LocalDateTime,
+            events: List<CalendarEvent>
+        ): Int = events.size
         override suspend fun clearAllEvents() {
             eventsFlow.value = emptyList()
         }
@@ -209,6 +223,93 @@ class CalendarViewModelTest {
 
         viewModel.setAppLanguage(AppLanguage.GREEK)
         assertEquals(AppLanguage.GREEK, viewModel.uiState.value.appLanguage)
+    }
+
+    @Test
+    fun today_movesTheCalendarWithoutOpeningDayDetails() = runTest {
+        val repo = FakeEventRepository()
+        val viewModel = CalendarViewModel(repo, ScheduleSyncManager(repo))
+        viewModel.setDisplayLayoutMode(DisplayLayoutMode.FULLSCREEN)
+        viewModel.onDateSelected(LocalDate.of(2026, 1, 15))
+        viewModel.dismissDayDetailsSheet()
+
+        viewModel.onTodaySelected()
+
+        assertEquals(LocalDate.now(), viewModel.uiState.value.selectedDate)
+        assertFalse(viewModel.uiState.value.showDayDetailsSheet)
+    }
+
+    @Test
+    fun deleteEvent_canBeUndoneWithNotesIntact() = runTest {
+        val repo = FakeEventRepository()
+        val start = LocalDateTime.of(2026, 11, 3, 9, 0)
+        val lesson = CalendarEvent(id = 7, title = "Φυσική", notes = "Κεφάλαιο 2", startTime = start, endTime = start.plusHours(2))
+        repo.eventsFlow.value = listOf(lesson)
+        val viewModel = CalendarViewModel(repo, ScheduleSyncManager(repo))
+        advanceUntilIdle()
+
+        viewModel.deleteEvent(lesson)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.allEvents.isEmpty())
+        assertEquals(MessageAction.UNDO_DELETE, viewModel.uiState.value.userMessage?.action)
+
+        viewModel.onMessageAction(MessageAction.UNDO_DELETE)
+        advanceUntilIdle()
+        assertEquals(listOf(lesson), viewModel.uiState.value.allEvents)
+    }
+
+    @Test
+    fun importFile_showsUnexpectedErrorsInADialogInsteadOfCrashing() = runTest {
+        val repo = FakeEventRepository()
+        val viewModel = CalendarViewModel(repo, ScheduleSyncManager(repo, ioDispatcher = testDispatcher))
+
+        viewModel.importFile(openStream = { throw StackOverflowError("parser recursion") }, fileName = { "timetable.docx" })
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isSyncing)
+        assertEquals(ErrorReport.Kind.SYNC, state.errorReport?.kind)
+        assertTrue(state.errorReport!!.details.startsWith("java.lang.StackOverflowError: parser recursion"))
+        // The dialog explains it; no snackbar repeats the failure.
+        assertEquals(null, state.userMessage)
+
+        viewModel.onErrorReportDismissed()
+        assertEquals(null, viewModel.uiState.value.errorReport)
+    }
+
+    @Test
+    fun crashFromTheLastRun_isShownOnStart() = runTest {
+        val repo = FakeEventRepository()
+        val report = "java.lang.IllegalStateException: No ActivityResultRegistryOwner was provided"
+
+        val viewModel = CalendarViewModel(repo, ScheduleSyncManager(repo), lastCrash = report)
+
+        assertEquals(ErrorReport(ErrorReport.Kind.CRASH, report), viewModel.uiState.value.errorReport)
+    }
+
+    @Test
+    fun semesterFilter_handlesMultiSemesterEventsAndPdeToggle() = runTest {
+        val repo = FakeEventRepository()
+        val date = LocalDate.of(2026, 9, 2)
+        repo.eventsFlow.value = listOf(
+            CalendarEvent(id = 1, title = "Τεχνολογία Πολυμέσων", semester = "5,6", startTime = date.atTime(15, 0), endTime = date.atTime(17, 0)),
+            CalendarEvent(id = 2, title = "Εκπαιδευτική Ψυχολογία", semester = "PDE", startTime = date.atTime(9, 0), endTime = date.atTime(11, 0))
+        )
+        val viewModel = CalendarViewModel(repo, ScheduleSyncManager(repo))
+        viewModel.onDateSelected(date)
+        advanceUntilIdle()
+
+        fun visibleTitles() = viewModel.uiState.value.selectedDateEvents.map { it.title }
+
+        viewModel.setSemesterFilter("6")
+        assertEquals(listOf("Τεχνολογία Πολυμέσων"), visibleTitles())
+        viewModel.setSemesterFilter("7")
+        assertTrue(visibleTitles().isEmpty())
+
+        viewModel.setIncludePde(true)
+        assertEquals(listOf("Εκπαιδευτική Ψυχολογία"), visibleTitles())
+        viewModel.setIncludePde(false)
+        assertTrue(visibleTitles().isEmpty())
     }
 
     @Test

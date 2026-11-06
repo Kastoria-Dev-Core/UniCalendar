@@ -11,8 +11,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,7 +26,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocationOn
@@ -35,13 +37,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,67 +51,78 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.kastoriadev.unicalendar.R
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+import org.kastoriadev.unicalendar.ui.common.EmptyDayState
+import org.kastoriadev.unicalendar.ui.common.EventTypeTag
+import org.kastoriadev.unicalendar.ui.common.eventTypeColor
+import org.kastoriadev.unicalendar.ui.common.formatTimeRange
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+
+/** Bottom padding so the last card can scroll above the floating action button. */
+internal val FabClearance = 88.dp
 
 @Composable
 fun EventList(
     selectedDate: LocalDate,
     events: List<CalendarEvent>,
+    hasAnyEvents: Boolean,
     onEditNoteClick: (CalendarEvent) -> Unit,
     onDeleteEvent: (CalendarEvent) -> Unit,
+    onSyncClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    val dateHeaderFormatter = remember(locale) {
-        DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", locale)
+    val dateHeader = remember(selectedDate, locale) {
+        selectedDate.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", locale))
+            .replaceFirstChar { it.titlecase(locale) }
     }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = selectedDate.format(dateHeaderFormatter),
+                text = dateHeader,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
 
-            Text(
-                text = stringResource(R.string.tap_lesson_for_notes),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
+            if (events.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.tap_lesson_for_notes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         if (events.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.no_events),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            EmptyDayState(
+                hasAnyEvents = hasAnyEvents,
+                emptyDayText = stringResource(R.string.no_events),
+                onSyncClick = onSyncClick
+            )
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = FabClearance),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(events, key = { it.id }) { event ->
@@ -132,21 +144,16 @@ fun ExpandableEventCard(
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    val startTimeStr = event.startTime.format(timeFormatter)
-    val endTimeStr = event.endTime.format(timeFormatter)
-    val typeColor = getEventTypeColor(event.type)
+    var isExpanded by rememberSaveable(event.id) { mutableStateOf(false) }
+    val typeColor = eventTypeColor(event.type)
+    val colors = MaterialTheme.colorScheme
 
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded },
+        onClick = { isExpanded = !isExpanded },
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = BorderStroke(1.dp, colors.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
@@ -155,14 +162,16 @@ fun ExpandableEventCard(
                 .padding(12.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Color accent bar
+                // Colour accent bar, as tall as the card's header content.
                 Box(
                     modifier = Modifier
                         .width(4.dp)
-                        .height(44.dp)
+                        .fillMaxHeight()
                         .clip(RoundedCornerShape(2.dp))
                         .background(typeColor)
                 )
@@ -175,43 +184,32 @@ fun ExpandableEventCard(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "$startTimeStr - $endTimeStr",
+                            text = formatTimeRange(event.startTime, event.endTime),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = colors.primary,
+                            maxLines = 1
                         )
 
-                        SuggestionChip(
-                            onClick = {},
-                            label = {
-                                Text(
-                                    text = stringResource(event.type.displayNameRes),
-                                    style = MaterialTheme.typography.labelMedium
-                                )
-                            },
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = typeColor.copy(alpha = 0.10f),
-                                labelColor = typeColor
-                            ),
-                            border = BorderStroke(1.dp, typeColor.copy(alpha = 0.25f)),
-                            modifier = Modifier.height(24.dp)
-                        )
+                        EventTypeTag(type = event.type)
 
                         if (event.isSynced) {
                             Icon(
                                 imageVector = Icons.Default.Sync,
                                 contentDescription = stringResource(R.string.content_desc_synced),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = colors.onSurfaceVariant,
                                 modifier = Modifier.size(14.dp)
                             )
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(2.dp))
+
                     Text(
                         text = event.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = colors.onSurface
                     )
 
                     if (event.location.isNotBlank()) {
@@ -223,13 +221,13 @@ fun ExpandableEventCard(
                             Icon(
                                 imageVector = Icons.Default.LocationOn,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = colors.onSurfaceVariant,
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
                                 text = event.location,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = colors.onSurfaceVariant
                             )
                         }
                     }
@@ -239,12 +237,12 @@ fun ExpandableEventCard(
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription = stringResource(if (isExpanded) R.string.content_desc_collapse else R.string.content_desc_expand),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = colors.onSurfaceVariant
                     )
                 }
             }
 
-            // Expanded details and notes section
+            // Expanded details and notes
             AnimatedVisibility(
                 visible = isExpanded,
                 enter = fadeIn() + expandVertically(),
@@ -256,7 +254,7 @@ fun ExpandableEventCard(
                         .padding(top = 8.dp)
                 ) {
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant,
+                        color = colors.outlineVariant,
                         modifier = Modifier.padding(vertical = 6.dp)
                     )
 
@@ -265,64 +263,17 @@ fun ExpandableEventCard(
                             text = stringResource(R.string.field_description),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = colors.primary
                         )
                         Text(
                             text = event.description,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 6.dp)
+                            color = colors.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
 
-                    // Notes Block
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable(onClick = onEditNoteClick)
-                            .padding(10.dp)
-                    ) {
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.field_personal_notes),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-
-                                Text(
-                                    text = stringResource(R.string.btn_edit),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            if (event.notes.isNotBlank()) {
-                                Text(
-                                    text = event.notes,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            } else {
-                                Text(
-                                    text = stringResource(R.string.notes_empty_tap),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontStyle = FontStyle.Italic,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
+                    NotesBlock(notes = event.notes, onClick = onEditNoteClick)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -346,6 +297,55 @@ fun ExpandableEventCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun NotesBlock(notes: String, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(colors.surfaceVariant)
+            .clickable(onClick = onClick)
+            .padding(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.field_personal_notes),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = colors.primary
+            )
+            Text(
+                text = stringResource(R.string.btn_edit),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = colors.primary
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        if (notes.isNotBlank()) {
+            Text(
+                text = notes,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onSurface
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.notes_empty_tap),
+                style = MaterialTheme.typography.bodySmall,
+                fontStyle = FontStyle.Italic,
+                color = colors.onSurfaceVariant
+            )
         }
     }
 }

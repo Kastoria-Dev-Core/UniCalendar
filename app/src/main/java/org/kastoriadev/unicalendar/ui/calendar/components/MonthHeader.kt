@@ -3,8 +3,10 @@ package org.kastoriadev.unicalendar.ui.calendar.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -19,11 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.kastoriadev.unicalendar.R
+import org.kastoriadev.unicalendar.ui.common.AutoSizeText
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle as DateTextStyle
+import java.util.Locale
 
 @Composable
 fun MonthHeader(
@@ -34,46 +39,80 @@ fun MonthHeader(
     modifier: Modifier = Modifier
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    val monthTitle = remember(currentMonth, locale) {
-        currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", locale))
-    }
+    val monthTitle = remember(currentMonth, locale) { monthTitle(currentMonth, locale) }
 
+    CalendarNavigationHeader(
+        title = monthTitle,
+        titleStyle = MaterialTheme.typography.headlineMedium,
+        previousDescription = stringResource(R.string.action_previous_month),
+        nextDescription = stringResource(R.string.action_next_month),
+        onPrevious = onPreviousMonth,
+        onNext = onNextMonth,
+        onTodayClick = onTodayClick,
+        modifier = modifier
+    )
+}
+
+/**
+ * "Νοέμβριος 2026": the stand-alone (nominative) month name. The "MMMM" pattern yields the
+ * genitive form in Greek ("Νοεμβρίου"), which is only correct next to a day number.
+ */
+internal fun monthTitle(month: YearMonth, locale: Locale): String {
+    val standalone = month.month.getDisplayName(DateTextStyle.FULL_STANDALONE, locale)
+    val name = if (standalone.any { it.isLetter() }) standalone else month.month.getDisplayName(DateTextStyle.FULL, locale)
+    return "${name.replaceFirstChar { it.titlecase(locale) }} ${month.year}"
+}
+
+/** Title + "Today" + previous/next buttons, shared by the month and week headers. */
+@Composable
+internal fun CalendarNavigationHeader(
+    title: String,
+    titleStyle: TextStyle,
+    previousDescription: String,
+    nextDescription: String,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onTodayClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = monthTitle,
-            style = MaterialTheme.typography.headlineMedium,
+        AutoSizeText(
+            text = title,
+            style = titleStyle,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
         )
+
+        Spacer(modifier = Modifier.width(8.dp))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             FilledTonalButton(
                 onClick = onTodayClick,
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
             ) {
-                Text(text = stringResource(R.string.action_today), style = MaterialTheme.typography.labelMedium)
+                Text(text = stringResource(R.string.action_today), style = MaterialTheme.typography.labelLarge)
             }
 
-            IconButton(onClick = onPreviousMonth) {
+            IconButton(onClick = onPrevious) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.action_previous_month)
+                    contentDescription = previousDescription
                 )
             }
 
-            IconButton(onClick = onNextMonth) {
+            IconButton(onClick = onNext) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = stringResource(R.string.action_next_month)
+                    contentDescription = nextDescription
                 )
             }
         }
