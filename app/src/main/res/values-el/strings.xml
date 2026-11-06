@@ -136,19 +136,17 @@
     <string name="content_desc_collapse">Απόκρυψη λεπτομερειών</string>
 
     <!-- Add Event Dialog -->
-    <string name="dialog_add_title">Προσθήκη Συμβάντος για %1$s</string>
+    <string name="dialog_add_title">Νέο συμβάν · %1$s</string>
     <string name="field_title">Τίτλος</string>
     <string name="field_location_hint">Αίθουσα (π.χ. Αίθουσα 102)</string>
-    <string name="field_semester_hint">Εξάμηνο (προαιρετικό, π.χ. 1, 3, 5, ΠΔΕ)</string>
+    <string name="field_semester">Εξάμηνο</string>
     <string name="field_description_input">Περιγραφή</string>
-    <string name="field_time">Ώρα</string>
-    <string name="field_start_h">Έναρξη Ω</string>
-    <string name="field_start_m">Έναρξη Λ</string>
-    <string name="field_end_h">Λήξη Ω</string>
-    <string name="field_end_m">Λήξη Λ</string>
+    <string name="field_start_time">Έναρξη</string>
+    <string name="field_end_time">Λήξη</string>
     <string name="field_category">Κατηγορία</string>
+    <string name="dialog_pick_time_title">Επιλογή ώρας</string>
     <string name="error_empty_title">Ο τίτλος δεν μπορεί να είναι κενός</string>
-    <string name="error_invalid_time">Παρακαλώ εισάγετε έγκυρες ώρες (00-23, 00-59)</string>
+    <string name="error_end_before_start">Η ώρα λήξης πρέπει να είναι μετά την ώρα έναρξης</string>
 
     <!-- Edit Note Dialog -->
     <string name="dialog_note_title">Σημειώσεις για %1$s</string>
