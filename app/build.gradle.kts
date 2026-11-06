@@ -37,7 +37,15 @@ android {
     val keyPassword = System.getenv("KEY_PASSWORD")
         ?: keystoreProperties.getProperty("keyPassword")
 
-    val resolvedStoreFile = file(storeFilePath)
+    val candidateStoreFiles = listOf(
+        project.file(storeFilePath),
+        rootProject.file(storeFilePath),
+        rootProject.file("app/$storeFilePath"),
+        project.file("keystore/release.jks"),
+        rootProject.file("app/keystore/release.jks"),
+        rootProject.file("keystore/release.jks")
+    )
+    val resolvedStoreFile = candidateStoreFiles.firstOrNull { it.exists() } ?: project.file(storeFilePath)
     val hasReleaseSigning = resolvedStoreFile.exists() &&
         !storePassword.isNullOrEmpty() &&
         !keyAlias.isNullOrEmpty() &&
@@ -60,8 +68,12 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            if (hasReleaseSigning) {
-                signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                // Fall back to debug signing if release credentials are not provided,
+                // ensuring the produced APK is ALWAYS signed and installable.
+                signingConfigs.getByName("debug")
             }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
