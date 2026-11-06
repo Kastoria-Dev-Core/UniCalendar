@@ -1,14 +1,17 @@
 package org.kastoriadev.unicalendar.data.parser
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.kastoriadev.unicalendar.domain.model.EventType
+import org.kastoriadev.unicalendar.testutil.TestDocuments
 import java.io.File
 import java.io.FileInputStream
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalTime
 
 class DocxScheduleParserTest {
 
@@ -120,6 +123,103 @@ class DocxScheduleParserTest {
         assertEquals(11, first.endTime.hour)
         assertTrue(first.description.contains("Φωτιάδης"))
         assertEquals("Μεγ. Αμφιθέατρο", first.location)
+    }
+
+    @Test
+    fun parseDocumentXml_gridWithSplitDayColumns_keepsCoursesOnTheirDay() {
+        // ΔΕΥΤΕΡΑ spans two grid columns for parallel tutorials (as in the 2025-2026 timetable).
+        val xml = TestDocuments.document(
+            TestDocuments.paragraph("Ωρολόγιο Πρόγραμμα μαθημάτων Χειμερινού Εξαμήνου Aκαδ. Έτους 2025-2026"),
+            TestDocuments.paragraph("Γ΄ εξάμηνο"),
+            TestDocuments.table(
+                TestDocuments.row(
+                    TestDocuments.cell("ΩΡΑ"),
+                    TestDocuments.cell("ΔΕΥΤΕΡΑ", span = 2),
+                    TestDocuments.cell("ΤΡΙΤΗ")
+                ),
+                TestDocuments.row(
+                    TestDocuments.cell("13:00 – 14:00"),
+                    TestDocuments.cell(),
+                    TestDocuments.cell("Μεταγλωττιστές", "(Φροντιστήριο 1)", "Γ. Ματλής", "Εργ. Ε6", merge = "restart"),
+                    TestDocuments.cell("Αριθμητική Ανάλυση", "Ι. Τουλόπουλος")
+                ),
+                TestDocuments.row(
+                    TestDocuments.cell("14:00 – 15:00"),
+                    TestDocuments.cell(),
+                    TestDocuments.cell(merge = "continue"),
+                    TestDocuments.cell()
+                )
+            )
+        )
+
+        val events = DocxScheduleParser(today = { LocalDate.of(2025, 11, 1) })
+            .parseDocumentXml(xml, "Timetable_ΧE_2025-2026_V5.2.docx")
+
+        val tutorial = events.first { it.title.startsWith("Μεταγλωττιστές") }
+        assertEquals("Μεταγλωττιστές (Φροντιστήριο 1)", tutorial.title)
+        assertEquals(DayOfWeek.MONDAY, tutorial.startTime.dayOfWeek)
+        assertEquals(LocalTime.of(13, 0), tutorial.startTime.toLocalTime())
+        assertEquals(LocalTime.of(15, 0), tutorial.endTime.toLocalTime())
+        assertEquals("Εργ. Ε6", tutorial.location)
+        assertEquals("3", tutorial.semester)
+
+        val analysis = events.first { it.title == "Αριθμητική Ανάλυση" }
+        assertEquals(DayOfWeek.TUESDAY, analysis.startTime.dayOfWeek)
+        assertEquals(LocalTime.of(14, 0), analysis.endTime.toLocalTime())
+    }
+
+    @Test
+    fun parseDocumentXml_springTimetable_startsInFebruaryAndSkipsHolidays() {
+        val xml = TestDocuments.document(
+            TestDocuments.paragraph("Ωρολόγιο Πρόγραμμα μαθημάτων Εαρινού Εξαμήνου Aκαδ. Έτους 2025-2026"),
+            TestDocuments.paragraph("Β΄εξάμηνο"),
+            TestDocuments.table(
+                TestDocuments.row(TestDocuments.cell("ΩΡΑ"), TestDocuments.cell("ΔΕΥΤΕΡΑ"), TestDocuments.cell("ΤΡΙΤΗ")),
+                TestDocuments.row(
+                    TestDocuments.cell("09:00–11:00"),
+                    TestDocuments.cell("Δομές Δεδομένων", "Γ. Σίσιας", "Β11"),
+                    TestDocuments.cell()
+                )
+            )
+        )
+
+        val events = DocxScheduleParser(today = { LocalDate.of(2026, 3, 1) }).parseDocumentXml(xml, null)
+        val dates = events.map { it.startTime.toLocalDate() }
+
+        assertTrue(events.all { it.semester == "2" })
+        assertEquals(LocalDate.of(2026, 2, 9), dates.min())
+        assertFalse("Clean Monday", LocalDate.of(2026, 2, 23) in dates)
+        assertFalse("Easter break", LocalDate.of(2026, 4, 13) in dates)
+        assertTrue(LocalDate.of(2026, 3, 2) in dates)
+    }
+
+    @Test
+    fun parseDocumentXml_winterTimetable_skipsNationalHolidays() {
+        val events = DocxScheduleParser(today = { LocalDate.of(2026, 11, 6) })
+            .parseDocumentXml(TestDocuments.winterTimetableXml(), null)
+
+        val tuesdays = events.filter { it.title.startsWith("Ηλεκτρονική") }.map { it.startTime.toLocalDate() }
+        // 17 Nov, 29 Dec and 5 Jan fall on holidays / the Christmas break.
+        assertEquals(DocxScheduleParser.TERM_WEEKS - 3, tuesdays.size)
+        assertFalse(LocalDate.of(2026, 11, 17) in tuesdays)
+        assertTrue(LocalDate.of(2026, 12, 22) in tuesdays)
+        assertEquals(EventType.LAB, events.first { it.title.startsWith("Ηλεκτρονική") }.type)
+        assertEquals(EventType.LECTURE, events.first { it.title == "Φυσική" }.type)
+    }
+
+    @Test
+    fun detectSemester_readsHeadingsButIgnoresNotes() {
+        assertEquals("2", parser.detectSemester("Β΄εξάμηνο"))
+        assertEquals("6", parser.detectSemester("ΣΤ΄εξάμηνο"))
+        assertEquals("3", parser.detectSemester("3ο ΕΞΑΜΗΝΟ"))
+        assertEquals("PDE", parser.detectSemester("Προαιρετικό Πρόγραμμα Παιδαγωγικής & Διδακτικής Επάρκειας"))
+        assertNull(parser.detectSemester("Ωρολόγιο Πρόγραμμα μαθημάτων Χειμερινού Εξαμήνου Aκαδ. Έτους 2026-2027"))
+        assertNull(
+            parser.detectSemester(
+                "ΣΗΜΕΙΩΣΗ 2η: Από το Ακαδ. Έτος 2025-2026 κι εντεύθεν το κατ’ επιλογήν υποχρεωτικό μάθημα " +
+                    "«Υπολογιστικά Νέφη» θα διδάσκεται στο εαρινό εξάμηνο (ΣΤ’)"
+            )
+        )
     }
 
     @Test
