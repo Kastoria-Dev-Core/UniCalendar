@@ -348,33 +348,16 @@ fun CalendarScreen(
     }
 }
 
-/** App logo with the name; the name is dropped when the bar is too narrow to fit it. */
+/** App logo; name is omitted to keep the top bar clean and spacious. */
 @Composable
 private fun AppBarTitle() {
-    BoxWithConstraints {
-        val showName = maxWidth >= 170.dp
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Image(
-                painter = painterResource(R.drawable.ic_app_logo),
-                contentDescription = if (showName) null else stringResource(R.string.app_name),
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(RoundedCornerShape(8.dp))
-            )
-            if (showName) {
-                Text(
-                    text = stringResource(R.string.app_name),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
+    Image(
+        painter = painterResource(R.drawable.ic_app_logo),
+        contentDescription = stringResource(R.string.app_name),
+        modifier = Modifier
+            .size(32.dp)
+            .clip(RoundedCornerShape(8.dp))
+    )
 }
 
 /** Compact week/month switch. Icon-only so it fits next to the actions in any language. */
