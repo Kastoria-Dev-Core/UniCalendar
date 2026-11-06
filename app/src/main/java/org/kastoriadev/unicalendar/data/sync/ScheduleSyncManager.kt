@@ -1,152 +1,161 @@
 package org.kastoriadev.unicalendar.data.sync
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.jsoup.Jsoup
-import org.kastoriadev.unicalendar.data.parser.DocxScheduleParser
-import org.kastoriadev.unicalendar.data.parser.ScheduleParserFactory
-import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+import org.kastoriadev.unicalendar.BuildConfig
+import org.kastoriadev.unicalendar.data.parser.ScheduleDocumentParser
+import org.kastoriadev.unicalendar.data.sync.UniversityScheduleLocator.Schedule
+import org.kastoriadev.unicalendar.domain.model.EventFeed
+import org.kastoriadev.unicalendar.domain.model.SyncError
 import org.kastoriadev.unicalendar.domain.model.SyncResult
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
-import java.io.ByteArrayInputStream
-import java.io.IOException
 import java.io.InputStream
+import java.time.LocalTime
 import java.util.concurrent.TimeUnit
 
 class ScheduleSyncManager(
     private val repository: EventRepository,
-    private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .followRedirects(true)
-        .build()
+    client: OkHttpClient = defaultHttpClient(),
+    private val locator: UniversityScheduleLocator = UniversityScheduleLocator(client),
+    private val documentParser: ScheduleDocumentParser = ScheduleDocumentParser(),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
-    suspend fun syncFromUrl(
-        url: String,
-        targetSemester: String? = null,
-        replaceExisting: Boolean = true
-    ): SyncResult = withContext(Dispatchers.IO) {
-        try {
-            val cleanUrl = url.trim()
-            val request = Request.Builder()
-                .url(cleanUrl)
-                .header("User-Agent", "UniCalendar-Android/1.0")
-                .build()
+    private sealed interface FeedOutcome {
+        data class Imported(val feed: EventFeed, val count: Int, val label: String?) : FeedOutcome
+        data class Failed(val error: SyncError) : FeedOutcome
+    }
 
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) {
-                return@withContext SyncResult.Failure("HTTP request failed with status ${response.code}")
+    /**
+     * Downloads the department's current timetable and exam schedule and replaces the previously
+     * synced copies. A source that fails keeps its old events; the other is still updated.
+     *
+     * @param targetSemester semester key to import ("1".."8", "PDE"), or null/"ALL" for everything.
+     */
+    suspend fun syncUniversitySchedule(targetSemester: String?): SyncResult = withContext(ioDispatcher) {
+        val semester = normalizeSemester(targetSemester)
+        val (timetable, exams) = coroutineScope {
+            val timetable = async { syncPublished(Schedule.TIMETABLE, EventFeed.TIMETABLE, semester) }
+            val exams = async { syncPublished(Schedule.EXAMS, EventFeed.EXAMS, semester) }
+            timetable.await() to exams.await()
+        }
+
+        if (timetable is FeedOutcome.Failed && exams is FeedOutcome.Failed) {
+            return@withContext SyncResult.Failure(timetable.error)
+        }
+        SyncResult.Success(
+            lessonCount = (timetable as? FeedOutcome.Imported)?.count ?: 0,
+            examCount = (exams as? FeedOutcome.Imported)?.count ?: 0,
+            timetableError = (timetable as? FeedOutcome.Failed)?.error,
+            examsError = (exams as? FeedOutcome.Failed)?.error,
+            timetableLabel = (timetable as? FeedOutcome.Imported)?.label,
+            examsLabel = (exams as? FeedOutcome.Imported)?.label
+        )
+    }
+
+    /**
+     * Imports a file picked by the user. The format is detected from the content: a .docx
+     * timetable or exam schedule, an .ics calendar or an HTML timetable page.
+     *
+     * @param openStream opens the file; it is called (and the stream closed) on the IO dispatcher,
+     *   since content providers such as cloud storage may block while downloading.
+     * @param fileName resolves the display name, also on the IO dispatcher.
+     */
+    suspend fun importFile(
+        openStream: () -> InputStream?,
+        fileName: () -> String?,
+        targetSemester: String?
+    ): SyncResult = withContext(ioDispatcher) {
+        val bytes = try {
+            openStream()?.use { UniversityScheduleLocator.readBounded(it, MAX_IMPORT_BYTES) }
+        } catch (_: Exception) {
+            null
+        } ?: return@withContext SyncResult.Failure(SyncError.FileUnreadable)
+        val name = try {
+            fileName()
+        } catch (_: Exception) {
+            null
+        }
+
+        val outcome = try {
+            store(documentParser.parse(bytes, name), normalizeSemester(targetSemester), null)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // A damaged document (broken ZIP or XML) must not crash the app.
+            FeedOutcome.Failed(SyncError.NothingRecognized)
+        }
+        when (outcome) {
+            is FeedOutcome.Failed -> SyncResult.Failure(outcome.error)
+            is FeedOutcome.Imported -> when (outcome.feed) {
+                EventFeed.TIMETABLE -> SyncResult.Success(lessonCount = outcome.count)
+                EventFeed.EXAMS -> SyncResult.Success(examCount = outcome.count)
+                else -> SyncResult.Success(otherCount = outcome.count)
             }
-
-            val contentType = response.header("Content-Type", "")?.lowercase() ?: ""
-            val isDocx = cleanUrl.endsWith(".docx", ignoreCase = true) ||
-                    contentType.contains("wordprocessingml") ||
-                    contentType.contains("application/zip")
-
-            val events: List<CalendarEvent> = if (isDocx) {
-                val bytes = response.body?.bytes() ?: return@withContext SyncResult.Failure("Empty file received")
-                DocxScheduleParser().parseStream(ByteArrayInputStream(bytes), cleanUrl)
-            } else {
-                val bodyString = response.body?.string() ?: return@withContext SyncResult.Failure("Empty response received")
-
-                // Check if this HTML page contains an announcement link to a .docx schedule file
-                val docxLink = extractDocxLinkFromHtml(bodyString, cleanUrl)
-                if (docxLink != null) {
-                    val docxRequest = Request.Builder().url(docxLink).header("User-Agent", "UniCalendar-Android/1.0").build()
-                    val docxResponse = client.newCall(docxRequest).execute()
-                    if (docxResponse.isSuccessful && docxResponse.body != null) {
-                        val docxBytes = docxResponse.body!!.bytes()
-                        DocxScheduleParser().parseStream(ByteArrayInputStream(docxBytes), docxLink)
-                    } else {
-                        val parser = ScheduleParserFactory.getParser(bodyString, cleanUrl)
-                        parser.parse(bodyString, cleanUrl)
-                    }
-                } else {
-                    val parser = ScheduleParserFactory.getParser(bodyString, cleanUrl)
-                    parser.parse(bodyString, cleanUrl)
-                }
-            }
-
-            if (events.isEmpty()) {
-                return@withContext SyncResult.Failure("No schedule courses could be parsed from the provided source")
-            }
-
-            val filteredEvents = if (!targetSemester.isNullOrBlank() && targetSemester != "ALL") {
-                events.filter { it.semester.equals(targetSemester, ignoreCase = true) || it.semester.isBlank() }
-            } else {
-                events
-            }
-
-            if (filteredEvents.isEmpty()) {
-                return@withContext SyncResult.Failure("Found ${events.size} courses, but none matched semester: $targetSemester")
-            }
-
-            if (replaceExisting) {
-                if (!targetSemester.isNullOrBlank() && targetSemester != "ALL") {
-                    repository.clearSyncedEventsBySemester(targetSemester)
-                } else {
-                    repository.clearSyncedEvents()
-                }
-            }
-
-            repository.insertEvents(filteredEvents)
-            SyncResult.Success(filteredEvents.size)
-        } catch (e: IOException) {
-            SyncResult.Failure("Network error: ${e.localizedMessage ?: "Connection error"}")
-        } catch (e: Exception) {
-            SyncResult.Failure("Parsing error: ${e.localizedMessage ?: "Unknown error"}")
         }
     }
 
-    suspend fun syncFromStream(
-        stream: InputStream,
-        fileName: String? = null,
-        targetSemester: String? = null,
-        replaceExisting: Boolean = true
-    ): SyncResult = withContext(Dispatchers.IO) {
+    private suspend fun syncPublished(schedule: Schedule, feed: EventFeed, semester: String?): FeedOutcome =
         try {
-            val parser = if (fileName?.endsWith(".docx", ignoreCase = true) == true) {
-                DocxScheduleParser()
-            } else {
-                DocxScheduleParser() // Default binary stream parser
-            }
-
-            val events = parser.parseStream(stream, fileName)
-            if (events.isEmpty()) {
-                return@withContext SyncResult.Failure("No timetable entries could be extracted from this document")
-            }
-
-            val filteredEvents = if (!targetSemester.isNullOrBlank() && targetSemester != "ALL") {
-                events.filter { it.semester.equals(targetSemester, ignoreCase = true) || it.semester.isBlank() }
-            } else {
-                events
-            }
-
-            if (replaceExisting) {
-                if (!targetSemester.isNullOrBlank() && targetSemester != "ALL") {
-                    repository.clearSyncedEventsBySemester(targetSemester)
-                } else {
-                    repository.clearSyncedEvents()
-                }
-            }
-
-            repository.insertEvents(filteredEvents)
-            SyncResult.Success(filteredEvents.size)
-        } catch (e: Exception) {
-            SyncResult.Failure("Failed to import file: ${e.localizedMessage ?: "Unknown error"}")
+            val document = locator.locate(schedule)
+            val bytes = locator.download(document.url)
+            store(documentParser.parse(bytes, document.url, expected = feed), semester, document.label)
+        } catch (e: SyncException) {
+            FeedOutcome.Failed(e.error)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // A damaged document (broken ZIP or XML) must not crash the app.
+            FeedOutcome.Failed(SyncError.NothingRecognized)
         }
+
+    private suspend fun store(
+        result: ScheduleDocumentParser.Result,
+        semester: String?,
+        label: String?
+    ): FeedOutcome {
+        val parsed = result as? ScheduleDocumentParser.Result.Parsed
+            ?: return FeedOutcome.Failed(SyncError.UnsupportedFormat)
+        if (parsed.events.isEmpty()) return FeedOutcome.Failed(SyncError.NothingRecognized)
+
+        // The document is authoritative for the dates it covers; older terms stay untouched.
+        val from = parsed.events.minOf { it.startTime }.toLocalDate().atStartOfDay()
+        val to = parsed.events.maxOf { it.startTime }.toLocalDate().atTime(LocalTime.MAX)
+        val selected = if (semester == null) {
+            parsed.events
+        } else {
+            parsed.events.filter { it.semesters.isEmpty() || semester in it.semesters }
+        }
+        repository.replaceSyncedEvents(parsed.feed, semester, from, to, selected)
+
+        val count = when (parsed.feed) {
+            // A weekly lesson repeats all term; report courses rather than occurrences.
+            EventFeed.TIMETABLE -> selected.distinctBy { it.title.lowercase() }.size
+            else -> selected.size
+        }
+        return FeedOutcome.Imported(parsed.feed, count, label)
     }
 
-    private fun extractDocxLinkFromHtml(html: String, baseUrl: String): String? {
-        try {
-            val doc = Jsoup.parse(html, baseUrl)
-            val docxAnchor = doc.select("a[href$=.docx], a[href*=.docx]").firstOrNull()
-            return docxAnchor?.absUrl("href")?.takeIf { it.isNotBlank() }
-        } catch (e: Exception) {
-            return null
-        }
+    private fun normalizeSemester(semester: String?): String? =
+        semester?.trim()?.takeUnless { it.isEmpty() || it.equals("ALL", ignoreCase = true) }
+
+    companion object {
+        private const val MAX_IMPORT_BYTES = 20L * 1024 * 1024
+        private val USER_AGENT = "UniCalendar-Android/${BuildConfig.VERSION_NAME}"
+
+        fun defaultHttpClient(): OkHttpClient = OkHttpClient.Builder()
+            .connectTimeout(20, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(90, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .addInterceptor { chain ->
+                chain.proceed(chain.request().newBuilder().header("User-Agent", USER_AGENT).build())
+            }
+            .build()
     }
 }

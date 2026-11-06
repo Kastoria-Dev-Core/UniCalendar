@@ -7,6 +7,7 @@ import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.util.UiText
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.temporal.TemporalAdjusters
 
@@ -29,6 +30,8 @@ data class CalendarUiState(
     val selectedDateEvents: List<CalendarEvent> = emptyList(),
     val isSyncing: Boolean = false,
     val syncMessage: UiText? = null,
+    val lastSyncedAt: LocalDateTime? = null,
+    val lastSyncLabel: String? = null,
     val showAddDialog: Boolean = false,
     val showSyncDialog: Boolean = false,
     val selectedEventForNotes: CalendarEvent? = null

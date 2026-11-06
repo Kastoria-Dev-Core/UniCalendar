@@ -16,15 +16,18 @@ import org.kastoriadev.unicalendar.domain.model.AppLanguage
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
 import org.kastoriadev.unicalendar.domain.model.EventType
+import org.kastoriadev.unicalendar.domain.model.SyncError
 import org.kastoriadev.unicalendar.domain.model.SyncResult
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
 import org.kastoriadev.unicalendar.util.UiText
 import java.io.InputStream
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 
 class CalendarViewModel(
@@ -41,7 +44,11 @@ class CalendarViewModel(
             selectedSemester = userPreferences?.selectedSemester,
             includePde = userPreferences?.includePde ?: false,
             showSemesterPrompt = userPreferences?.let { !it.hasCompletedOnboarding } ?: false,
-            canDismissSemesterPrompt = userPreferences?.hasCompletedOnboarding ?: true
+            canDismissSemesterPrompt = userPreferences?.hasCompletedOnboarding ?: true,
+            lastSyncedAt = userPreferences?.lastSyncEpochMillis?.takeIf { it > 0 }?.let { millis ->
+                LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault())
+            },
+            lastSyncLabel = userPreferences?.lastSyncLabel
         )
     )
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
@@ -101,13 +108,19 @@ class CalendarViewModel(
     fun clearAllSchedules() {
         viewModelScope.launch {
             repository.clearAllEvents()
-            userPreferences?.selectedSemester = null
+            userPreferences?.let { prefs ->
+                prefs.selectedSemester = null
+                prefs.lastSyncEpochMillis = 0L
+                prefs.lastSyncLabel = null
+            }
             _uiState.update { current ->
                 current.copy(
                     selectedSemester = null,
                     allEvents = emptyList(),
                     monthEvents = emptyMap(),
                     selectedDateEvents = emptyList(),
+                    lastSyncedAt = null,
+                    lastSyncLabel = null,
                     syncMessage = UiText.StringResource(R.string.msg_schedules_cleared)
                 )
             }
@@ -175,17 +188,11 @@ class CalendarViewModel(
             return events
         }
         return events.filter { event ->
-            val sem = event.semester.trim()
-            if (sem.equals(semester, ignoreCase = true)) {
-                true
-            } else if (includePde && sem.equals("PDE", ignoreCase = true)) {
-                true
-            } else if (sem.isBlank()) {
-                // User-created general event not tied to a uni course
-                true
-            } else {
-                false
-            }
+            // Exams can belong to several semesters ("5,6"); events without one are shown everywhere.
+            val semesters = event.semesters
+            semesters.isEmpty() ||
+                semesters.any { it.equals(semester, ignoreCase = true) } ||
+                (includePde && CalendarEvent.SEMESTER_PDE in semesters)
         }
     }
 
@@ -320,44 +327,64 @@ class CalendarViewModel(
         }
     }
 
-    fun syncFromGitHub(targetSemester: String? = null) {
-        val githubTimetableUrl = "https://raw.githubusercontent.com/Kastoria-Dev-Core/UniCalendar/main/app/src/main/assets/default_timetable.docx"
-        syncSchedule(githubTimetableUrl, targetSemester)
-    }
-
-    fun syncSchedule(url: String, targetSemester: String? = null) {
-        if (url.isBlank()) return
+    /** Imports the department's current timetable and exam schedule. */
+    fun syncFromUniversity(targetSemester: String? = null) {
+        if (_uiState.value.isSyncing) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSyncing = true, showSyncDialog = false) }
-            val result = syncManager.syncFromUrl(url.trim(), targetSemester)
-            val message = when (result) {
-                is SyncResult.Success -> UiText.StringResource(R.string.sync_success_format, result.importedCount)
-                is SyncResult.Failure -> UiText.StringResource(R.string.sync_failed_format, result.message)
+            val result = syncManager.syncUniversitySchedule(targetSemester)
+            if (result is SyncResult.Success) recordSuccessfulSync(result.timetableLabel ?: result.examsLabel)
+            _uiState.update { it.copy(isSyncing = false, syncMessage = syncMessage(result)) }
+        }
+    }
+
+    /** Imports a file picked by the user (.docx timetable / exam schedule, .ics, .html). */
+    fun importFile(openStream: () -> InputStream?, fileName: () -> String?, targetSemester: String? = null) {
+        if (_uiState.value.isSyncing) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSyncing = true, showSyncDialog = false) }
+            val result = syncManager.importFile(openStream, fileName, targetSemester)
+            _uiState.update { it.copy(isSyncing = false, syncMessage = syncMessage(result)) }
+        }
+    }
+
+    private fun recordSuccessfulSync(label: String?) {
+        val now = LocalDateTime.now()
+        userPreferences?.let { prefs ->
+            prefs.lastSyncEpochMillis = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            prefs.lastSyncLabel = label
+        }
+        _uiState.update { it.copy(lastSyncedAt = now, lastSyncLabel = label) }
+    }
+
+    private fun syncMessage(result: SyncResult): UiText = when (result) {
+        is SyncResult.Failure -> UiText.StringResource(R.string.sync_failed_format, errorText(result.error))
+        is SyncResult.Success -> {
+            val parts = buildList {
+                if (result.lessonCount > 0) add(UiText.PluralResource(R.plurals.count_courses, result.lessonCount, result.lessonCount))
+                if (result.examCount > 0) add(UiText.PluralResource(R.plurals.count_exams, result.examCount, result.examCount))
+                if (result.otherCount > 0) add(UiText.PluralResource(R.plurals.count_events, result.otherCount, result.otherCount))
             }
-            _uiState.update {
-                it.copy(
-                    isSyncing = false,
-                    syncMessage = message
-                )
+            val summary = when (parts.size) {
+                0 -> UiText.StringResource(R.string.sync_nothing_for_semester)
+                1 -> UiText.StringResource(R.string.sync_success_one, parts[0])
+                else -> UiText.StringResource(R.string.sync_success_two, parts[0], parts[1])
+            }
+            when {
+                result.examsError != null -> UiText.StringResource(R.string.sync_partial_exams_failed, summary)
+                result.timetableError != null -> UiText.StringResource(R.string.sync_partial_timetable_failed, summary)
+                else -> summary
             }
         }
     }
 
-    fun syncFromStream(stream: InputStream, fileName: String?, targetSemester: String? = null) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isSyncing = true, showSyncDialog = false) }
-            val result = syncManager.syncFromStream(stream, fileName, targetSemester)
-            val message = when (result) {
-                is SyncResult.Success -> UiText.StringResource(R.string.sync_success_stream_format, result.importedCount)
-                is SyncResult.Failure -> UiText.StringResource(R.string.import_failed_format, result.message)
-            }
-            _uiState.update {
-                it.copy(
-                    isSyncing = false,
-                    syncMessage = message
-                )
-            }
-        }
+    private fun errorText(error: SyncError): UiText = when (error) {
+        SyncError.Network -> UiText.StringResource(R.string.sync_error_network)
+        is SyncError.Http -> UiText.StringResource(R.string.sync_error_http, error.code)
+        SyncError.NoDocumentFound -> UiText.StringResource(R.string.sync_error_no_document)
+        SyncError.UnsupportedFormat -> UiText.StringResource(R.string.sync_error_unsupported)
+        SyncError.NothingRecognized -> UiText.StringResource(R.string.sync_error_nothing_recognized)
+        SyncError.FileUnreadable -> UiText.StringResource(R.string.sync_error_file_unreadable)
     }
 
     class Factory(

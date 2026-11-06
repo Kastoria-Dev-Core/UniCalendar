@@ -62,6 +62,7 @@
     <!-- Semester Filtering & Selection -->
     <string name="semester_all">Όλα τα Εξάμηνα</string>
     <string name="semester_all_courses">Όλα τα Μαθήματα</string>
+    <string name="semester_none">Χωρίς εξάμηνο (εμφανίζεται πάντα)</string>
     <string name="semester_format">%1$so Εξάμηνο (Semester %1$s)</string>
     <string name="semester_pde">ΠΔΕ (Παιδαγωγική Επάρκεια)</string>
     <string name="filter_all_courses">Όλα τα Μαθήματα</string>
@@ -76,16 +77,38 @@
 
     <!-- Sync Schedule Dialog -->
     <string name="dialog_sync_title">Συγχρονισμός Προγράμματος</string>
-    <string name="dialog_sync_desc">Συγχρονίστε αυτόματα το ωρολόγιο πρόγραμμα από το αποθετήριο GitHub ή εισαγάγετε τοπικό αρχείο.</string>
+    <string name="dialog_sync_desc">Λήψη του τρέχοντος ωρολογίου προγράμματος και του προγράμματος εξετάσεων του Τμήματος Πληροφορικής ή εισαγωγή αρχείου.</string>
     <string name="target_semester_label">Εξάμηνο-στόχος</string>
     <string name="sync_all_semesters_label">Όλα τα Εξάμηνα (Πλήρες Πρόγραμμα)</string>
-    <string name="btn_sync_github">Συγχρονισμός από GitHub</string>
-    <string name="btn_choose_local_file">Επιλογή τοπικού .docx / .ics</string>
-    <string name="sync_in_progress">Συγχρονισμός προγράμματος...</string>
-    <string name="sync_success_format">Εισήχθησαν επιτυχώς %1$d προγραμματισμένα μαθήματα</string>
-    <string name="sync_success_stream_format">Εισήχθησαν επιτυχώς %1$d μαθήματα από το αρχείο</string>
+    <string name="btn_sync_university">Συγχρονισμός από το Τμήμα</string>
+    <string name="btn_choose_local_file">Εισαγωγή αρχείου (.docx / .ics)</string>
+    <string name="sync_last_synced">Τελευταίος συγχρονισμός: %1$s</string>
+    <string name="sync_never">Δεν έχει γίνει συγχρονισμός</string>
+    <string name="sync_success_one">Εισαγωγή: %1$s</string>
+    <string name="sync_success_two">Εισαγωγή: %1$s και %2$s</string>
+    <string name="sync_nothing_for_semester">Δεν βρέθηκαν μαθήματα ή εξετάσεις για αυτό το εξάμηνο</string>
+    <string name="sync_partial_exams_failed">%1$s. Το πρόγραμμα εξετάσεων δεν ενημερώθηκε.</string>
+    <string name="sync_partial_timetable_failed">%1$s. Το ωρολόγιο πρόγραμμα δεν ενημερώθηκε.</string>
     <string name="sync_failed_format">Αποτυχία συγχρονισμού: %1$s</string>
-    <string name="import_failed_format">Αποτυχία εισαγωγής: %1$s</string>
+    <string name="sync_error_network">δεν υπάρχει σύνδεση στο διαδίκτυο ή ο διακομιστής δεν απάντησε</string>
+    <string name="sync_error_http">ο διακομιστής επέστρεψε σφάλμα (HTTP %1$d)</string>
+    <string name="sync_error_no_document">δεν βρέθηκε δημοσιευμένο πρόγραμμα</string>
+    <string name="sync_error_unsupported">ο τύπος αρχείου δεν υποστηρίζεται (χρησιμοποιήστε .docx ή .ics)</string>
+    <string name="sync_error_nothing_recognized">δεν αναγνωρίστηκαν μαθήματα ή εξετάσεις στο έγγραφο</string>
+    <string name="sync_error_file_unreadable">δεν ήταν δυνατό να ανοίξει το επιλεγμένο αρχείο</string>
+
+    <plurals name="count_courses">
+        <item quantity="one">%d μάθημα</item>
+        <item quantity="other">%d μαθήματα</item>
+    </plurals>
+    <plurals name="count_exams">
+        <item quantity="one">%d εξέταση</item>
+        <item quantity="other">%d εξετάσεις</item>
+    </plurals>
+    <plurals name="count_events">
+        <item quantity="one">%d συμβάν</item>
+        <item quantity="other">%d συμβάντα</item>
+    </plurals>
 
     <!-- Calendar & Event List UI -->
     <string name="tap_lesson_for_notes">Πατήστε για σημειώσεις</string>

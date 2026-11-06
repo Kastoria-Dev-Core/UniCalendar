@@ -69,6 +69,20 @@ class UserPreferences(context: Context) {
             prefs.edit().putString(KEY_APP_LANGUAGE, value.name).apply()
         }
 
+    /** Epoch millis of the last successful university sync, or 0 when never synced. */
+    var lastSyncEpochMillis: Long
+        get() = prefs.getLong(KEY_LAST_SYNC_MILLIS, 0L)
+        set(value) {
+            prefs.edit().putLong(KEY_LAST_SYNC_MILLIS, value).apply()
+        }
+
+    /** Name of the timetable document imported by the last sync. */
+    var lastSyncLabel: String?
+        get() = prefs.getString(KEY_LAST_SYNC_LABEL, null)
+        set(value) {
+            prefs.edit().putString(KEY_LAST_SYNC_LABEL, value).apply()
+        }
+
     companion object {
         private const val PREFS_NAME = "unicalendar_user_prefs"
         private const val KEY_SELECTED_SEMESTER = "key_selected_semester"
@@ -77,5 +91,7 @@ class UserPreferences(context: Context) {
         private const val KEY_THEME_MODE = "key_theme_mode"
         private const val KEY_DISPLAY_LAYOUT_MODE = "key_display_layout_mode"
         private const val KEY_APP_LANGUAGE = "key_app_language"
+        private const val KEY_LAST_SYNC_MILLIS = "key_last_sync_millis"
+        private const val KEY_LAST_SYNC_LABEL = "key_last_sync_label"
     }
 }

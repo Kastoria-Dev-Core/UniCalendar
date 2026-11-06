@@ -1,5 +1,6 @@
 package org.kastoriadev.unicalendar.ui
 
+import android.content.ContentResolver
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -122,8 +123,8 @@ class MainActivity : ComponentActivity() {
                                     onSaveNotes = viewModel::onSaveNotes,
                                     onAddEvent = viewModel::addEvent,
                                     onDeleteEvent = viewModel::deleteEvent,
-                                    onSyncFromGitHub = viewModel::syncFromGitHub,
-                                    onFileSelected = ::handleFileSelected,
+                                    onSyncFromUniversity = viewModel::syncFromUniversity,
+                                    onFileSelected = ::importFile,
                                     onDismissSyncMessage = viewModel::dismissSyncMessage
                                 )
                             }
@@ -134,30 +135,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun handleFileSelected(uri: Uri, targetSemester: String?) {
-        try {
-            val fileName = queryFileName(uri)
-            val inputStream = contentResolver.openInputStream(uri)
-            if (inputStream != null) {
-                viewModel.syncFromStream(inputStream, fileName, targetSemester)
-            }
-        } catch (e: Exception) {
-            // Error handled by ViewModel
-        }
+    /** Reads the picked file on a background thread; only the application's resolver is captured. */
+    private fun importFile(uri: Uri, targetSemester: String?) {
+        val resolver = applicationContext.contentResolver
+        viewModel.importFile(
+            openStream = { resolver.openInputStream(uri) },
+            fileName = { queryFileName(resolver, uri) },
+            targetSemester = targetSemester
+        )
     }
 
-    private fun queryFileName(uri: Uri): String? {
-        var name: String? = null
-        if (uri.scheme == "content") {
-            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (index >= 0) {
-                        name = cursor.getString(index)
+    private companion object {
+        fun queryFileName(resolver: ContentResolver, uri: Uri): String? {
+            if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
+                resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (index >= 0) return cursor.getString(index)
                     }
                 }
             }
+            return uri.lastPathSegment
         }
-        return name ?: uri.lastPathSegment
     }
 }

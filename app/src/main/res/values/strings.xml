@@ -62,6 +62,7 @@
     <!-- Semester Filtering & Selection -->
     <string name="semester_all">All Semesters</string>
     <string name="semester_all_courses">All Courses</string>
+    <string name="semester_none">No semester (always visible)</string>
     <string name="semester_format">%1$so Εξάμηνο (Semester %1$s)</string>
     <string name="semester_pde">ΠΔΕ (Παιδαγωγική Επάρκεια)</string>
     <string name="filter_all_courses">All Courses</string>
@@ -76,16 +77,38 @@
 
     <!-- Sync Schedule Dialog -->
     <string name="dialog_sync_title">Sync Timetable</string>
-    <string name="dialog_sync_desc">Sync your university schedule automatically from the central GitHub repository or import a local document.</string>
+    <string name="dialog_sync_desc">Download the latest timetable and exam schedule published by the Department of Informatics, or import a file.</string>
     <string name="target_semester_label">Target Semester</string>
     <string name="sync_all_semesters_label">All Semesters (Import Full Timetable)</string>
-    <string name="btn_sync_github">Sync from GitHub Repo</string>
-    <string name="btn_choose_local_file">Choose Local .docx / .ics</string>
-    <string name="sync_in_progress">Synchronizing schedule...</string>
-    <string name="sync_success_format">Successfully imported %1$d scheduled courses</string>
-    <string name="sync_success_stream_format">Successfully imported %1$d courses from document</string>
+    <string name="btn_sync_university">Sync from University</string>
+    <string name="btn_choose_local_file">Import File (.docx / .ics)</string>
+    <string name="sync_last_synced">Last synced: %1$s</string>
+    <string name="sync_never">Not synced yet</string>
+    <string name="sync_success_one">Imported %1$s</string>
+    <string name="sync_success_two">Imported %1$s and %2$s</string>
+    <string name="sync_nothing_for_semester">No courses or exams were found for this semester</string>
+    <string name="sync_partial_exams_failed">%1$s. The exam schedule could not be updated.</string>
+    <string name="sync_partial_timetable_failed">%1$s. The timetable could not be updated.</string>
     <string name="sync_failed_format">Sync failed: %1$s</string>
-    <string name="import_failed_format">Import failed: %1$s</string>
+    <string name="sync_error_network">no internet connection or the server did not respond</string>
+    <string name="sync_error_http">the server returned an error (HTTP %1$d)</string>
+    <string name="sync_error_no_document">no published schedule was found</string>
+    <string name="sync_error_unsupported">this file type is not supported (use .docx or .ics)</string>
+    <string name="sync_error_nothing_recognized">no lessons or exams were recognized in the document</string>
+    <string name="sync_error_file_unreadable">the selected file could not be opened</string>
+
+    <plurals name="count_courses">
+        <item quantity="one">%d course</item>
+        <item quantity="other">%d courses</item>
+    </plurals>
+    <plurals name="count_exams">
+        <item quantity="one">%d exam</item>
+        <item quantity="other">%d exams</item>
+    </plurals>
+    <plurals name="count_events">
+        <item quantity="one">%d event</item>
+        <item quantity="other">%d events</item>
+    </plurals>
 
     <!-- Calendar & Event List UI -->
     <string name="tap_lesson_for_notes">Tap lesson for notes</string>

@@ -19,6 +19,7 @@ import org.kastoriadev.unicalendar.data.sync.ScheduleSyncManager
 import org.kastoriadev.unicalendar.domain.model.AppLanguage
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.domain.model.DisplayLayoutMode
+import org.kastoriadev.unicalendar.domain.model.EventFeed
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
 import org.kastoriadev.unicalendar.ui.calendar.CalendarViewModel
@@ -34,18 +35,29 @@ class CalendarViewModelTest {
         val eventsFlow = MutableStateFlow<List<CalendarEvent>>(emptyList())
 
         override fun getAllEvents(): Flow<List<CalendarEvent>> = eventsFlow
-        override fun getEventsBySemester(semester: String?): Flow<List<CalendarEvent>> = eventsFlow
-        override fun getEventsForDate(date: LocalDate): Flow<List<CalendarEvent>> = eventsFlow
-        override fun getEventsForMonth(year: Int, month: Int): Flow<List<CalendarEvent>> = eventsFlow
-        override suspend fun getEventById(id: Long): CalendarEvent? = null
-        override suspend fun insertEvent(event: CalendarEvent): Long = 1L
-        override suspend fun insertEvents(events: List<CalendarEvent>): List<Long> = emptyList()
-        override suspend fun updateEvent(event: CalendarEvent) {}
-        override suspend fun updateNotes(id: Long, notes: String) {}
-        override suspend fun deleteEvent(event: CalendarEvent) {}
-        override suspend fun deleteEventById(id: Long) {}
-        override suspend fun clearSyncedEvents() {}
-        override suspend fun clearSyncedEventsBySemester(semester: String?) {}
+        override suspend fun getEventById(id: Long): CalendarEvent? = eventsFlow.value.firstOrNull { it.id == id }
+        override suspend fun insertEvent(event: CalendarEvent): Long {
+            eventsFlow.value = (eventsFlow.value.filterNot { it.id == event.id } + event).sortedBy { it.startTime }
+            return event.id
+        }
+        override suspend fun insertEvents(events: List<CalendarEvent>): List<Long> = events.map { insertEvent(it) }
+        override suspend fun updateEvent(event: CalendarEvent) {
+            insertEvent(event)
+        }
+        override suspend fun updateNotes(id: Long, notes: String) {
+            eventsFlow.value = eventsFlow.value.map { if (it.id == id) it.copy(notes = notes) else it }
+        }
+        override suspend fun deleteEvent(event: CalendarEvent) = deleteEventById(event.id)
+        override suspend fun deleteEventById(id: Long) {
+            eventsFlow.value = eventsFlow.value.filterNot { it.id == id }
+        }
+        override suspend fun replaceSyncedEvents(
+            feed: EventFeed,
+            semester: String?,
+            from: LocalDateTime,
+            to: LocalDateTime,
+            events: List<CalendarEvent>
+        ): Int = events.size
         override suspend fun clearAllEvents() {
             eventsFlow.value = emptyList()
         }

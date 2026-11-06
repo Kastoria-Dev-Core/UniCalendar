@@ -24,7 +24,7 @@ class UniCalendarApp : Application() {
     override fun onCreate() {
         super.onCreate()
         database = AppDatabase.getDatabase(this)
-        eventRepository = EventRepositoryImpl(database.eventDao())
+        eventRepository = EventRepositoryImpl(database)
         syncManager = ScheduleSyncManager(eventRepository)
         userPreferences = UserPreferences(this)
     }

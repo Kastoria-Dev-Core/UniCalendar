@@ -14,6 +14,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.kastoriadev.unicalendar.R
+import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+
+/** Semester keys used across the app, in display order. */
+internal val SemesterKeys = listOf("1", "2", "3", "4", "5", "6", "7", "8", CalendarEvent.SEMESTER_PDE)
+
+internal const val SEMESTER_ALL = "ALL"
+
+/** (key, label) pairs for semester pickers. "" means "no semester", [SEMESTER_ALL] means all of them. */
+@Composable
+internal fun semesterChoices(includeNone: Boolean = false, includeAll: Boolean = false): List<Pair<String, String>> {
+    val choices = mutableListOf<Pair<String, String>>()
+    if (includeAll) choices += SEMESTER_ALL to stringResource(R.string.sync_all_semesters_label)
+    if (includeNone) choices += "" to stringResource(R.string.semester_none)
+    for (key in SemesterKeys) choices += key to semesterLabel(key)
+    return choices
+}
+
+/** Full name of a semester key ("3o Εξάμηνο" / "Semester 3", "ΠΔΕ ..."). */
+@Composable
+internal fun semesterLabel(key: String?): String = when {
+    key.isNullOrBlank() || key.equals(SEMESTER_ALL, ignoreCase = true) -> stringResource(R.string.semester_all)
+    key.equals(CalendarEvent.SEMESTER_PDE, ignoreCase = true) -> stringResource(R.string.semester_pde)
+    else -> stringResource(R.string.semester_format, key)
+}
 
 @Composable
 fun SemesterFilterRow(

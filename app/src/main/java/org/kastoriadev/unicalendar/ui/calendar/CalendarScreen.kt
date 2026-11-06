@@ -102,7 +102,7 @@ fun CalendarScreen(
         type: EventType
     ) -> Unit,
     onDeleteEvent: (CalendarEvent) -> Unit,
-    onSyncFromGitHub: (targetSemester: String?) -> Unit,
+    onSyncFromUniversity: (targetSemester: String?) -> Unit,
     onFileSelected: (uri: Uri, targetSemester: String?) -> Unit,
     onDismissSyncMessage: () -> Unit,
     modifier: Modifier = Modifier
@@ -388,11 +388,13 @@ fun CalendarScreen(
             )
         }
 
-        // Sync Dialog (GitHub Repo automated sync & Local docx/ics file import)
+        // Sync Dialog (department timetable & exams, or a local .docx/.ics file)
         if (uiState.showSyncDialog) {
             SyncScheduleDialog(
+                lastSyncedAt = uiState.lastSyncedAt,
+                lastSyncLabel = uiState.lastSyncLabel,
                 onDismiss = { onSetSyncDialogVisible(false) },
-                onSyncFromGitHub = onSyncFromGitHub,
+                onSyncFromUniversity = onSyncFromUniversity,
                 onFileSelected = onFileSelected
             )
         }
