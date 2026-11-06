@@ -3,22 +3,18 @@ package org.kastoriadev.unicalendar.ui.calendar.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyItemScope
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,29 +23,37 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import org.kastoriadev.unicalendar.R
+import androidx.compose.ui.unit.sp
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.ui.common.eventTypeColor
-import org.kastoriadev.unicalendar.ui.common.formatTimeRange
 import org.kastoriadev.unicalendar.ui.common.uppercaseFor
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
 
+private val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+/**
+ * Responsive WeekGrid that fits all 7 days (Monday–Sunday) across the screen
+ * with ZERO horizontal scrolling in both full screen and split screen modes.
+ */
 @Composable
 fun WeekGrid(
     weekStart: LocalDate,
@@ -61,113 +65,225 @@ fun WeekGrid(
 ) {
     val today = LocalDate.now()
     val weekDays = calculateWeekDays(weekStart)
-    val listState = rememberLazyListState()
 
-    // Keep the selected day in view when the week or the selection changes.
-    val selectedIndex = weekDays.indexOf(selectedDate)
-    LaunchedEffect(selectedDate, weekStart) {
-        if (selectedIndex != -1) {
-            listState.animateScrollToItem(selectedIndex)
-        }
-    }
-
-    LazyRow(
-        state = listState,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.fillMaxWidth()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp)
     ) {
-        items(weekDays, key = { it.toString() }) { date ->
-            WeekDayColumn(
-                date = date,
-                isSelected = date == selectedDate,
-                isToday = date == today,
-                events = eventsMap[date].orEmpty(),
-                onClick = { onDateClick(date) },
-                isFullScreen = isFullScreen
-            )
+        weekDays.forEach { date ->
+            if (isFullScreen) {
+                FullScreenWeekDayColumn(
+                    date = date,
+                    isSelected = date == selectedDate,
+                    isToday = date == today,
+                    events = eventsMap[date].orEmpty(),
+                    onClick = { onDateClick(date) },
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                SplitScreenWeekDayCell(
+                    date = date,
+                    isSelected = date == selectedDate,
+                    isToday = date == today,
+                    events = eventsMap[date].orEmpty(),
+                    onClick = { onDateClick(date) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }
 
+/**
+ * Compact 7-day selector cell used in Split Screen mode.
+ * Fits all 7 days cleanly above the LessonNotesSection without horizontal scrolling.
+ */
 @Composable
-fun LazyItemScope.WeekDayColumn(
+private fun SplitScreenWeekDayCell(
     date: LocalDate,
     isSelected: Boolean,
     isToday: Boolean,
     events: List<CalendarEvent>,
     onClick: () -> Unit,
-    isFullScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale).uppercaseFor(locale)
     val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(8.dp)
+
+    val backgroundColor = when {
+        isSelected -> colors.primaryContainer.copy(alpha = 0.5f)
+        isToday -> colors.surfaceVariant.copy(alpha = 0.6f)
+        else -> colors.surface
+    }
     val borderColor = when {
         isSelected -> colors.primary
         isToday -> colors.primary.copy(alpha = 0.7f)
         else -> colors.outlineVariant
     }
-    val backgroundColor = when {
-        isSelected -> colors.primaryContainer.copy(alpha = 0.35f)
-        isToday -> colors.surfaceVariant.copy(alpha = 0.5f)
-        else -> colors.surface
-    }
-
-    val cardModifier = if (isFullScreen) {
-        modifier
-            .fillParentMaxHeight()
-            .width(185.dp)
-    } else {
-        modifier
-            .width(148.dp)
-            .height(260.dp)
-    }
 
     Card(
         onClick = onClick,
-        modifier = cardModifier,
-        shape = RoundedCornerShape(12.dp),
+        modifier = modifier
+            .height(76.dp)
+            .clip(shape),
+        shape = shape,
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         border = BorderStroke(width = if (isSelected) 2.dp else 1.dp, color = borderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
-                .padding(8.dp)
                 .fillMaxSize()
+                .padding(vertical = 5.dp, horizontal = 2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header: day name and date number
+            // Day name (e.g., ΔΕΥ / MON)
+            Text(
+                text = dayName,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                fontWeight = FontWeight.Bold,
+                color = if (isSelected || isToday) colors.primary else colors.onSurfaceVariant,
+                maxLines = 1,
+                textAlign = TextAlign.Center
+            )
+
+            // Date number in circle badge
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isToday) colors.primary
+                        else if (isSelected) colors.primary.copy(alpha = 0.15f)
+                        else Color.Transparent
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = date.dayOfMonth.toString(),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                    fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isToday) colors.onPrimary else if (isSelected) colors.primary else colors.onSurface
+                )
+            }
+
+            // Event indicator dots
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.height(5.dp)
+            ) {
+                if (events.isNotEmpty()) {
+                    events.map { it.type }.distinct().take(3).forEach { type ->
+                        Box(
+                            modifier = Modifier
+                                .size(4.dp)
+                                .clip(CircleShape)
+                                .background(eventTypeColor(type))
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.size(4.dp))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Fullscreen vertical day column. Stretches to the pane height and fits all 7 days
+ * across the screen width with a compact event card list.
+ */
+@Composable
+private fun FullScreenWeekDayColumn(
+    date: LocalDate,
+    isSelected: Boolean,
+    isToday: Boolean,
+    events: List<CalendarEvent>,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val locale = LocalConfiguration.current.locales[0]
+    val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale).uppercaseFor(locale)
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(8.dp)
+
+    val backgroundColor = when {
+        isSelected -> colors.primaryContainer.copy(alpha = 0.35f)
+        isToday -> colors.surfaceVariant.copy(alpha = 0.45f)
+        else -> colors.surface
+    }
+    val borderColor = when {
+        isSelected -> colors.primary
+        isToday -> colors.primary.copy(alpha = 0.7f)
+        else -> colors.outlineVariant
+    }
+
+    Card(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxHeight()
+            .clip(shape),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        border = BorderStroke(width = if (isSelected) 2.dp else 1.dp, color = borderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(3.dp)
+        ) {
+            // Header: Day abbreviation & date number
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 3.dp)
             ) {
                 Text(
                     text = dayName,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     fontWeight = FontWeight.Bold,
-                    color = if (isSelected || isToday) colors.primary else colors.onSurfaceVariant
+                    color = if (isSelected || isToday) colors.primary else colors.onSurfaceVariant,
+                    maxLines = 1,
+                    textAlign = TextAlign.Center
                 )
+
+                Spacer(modifier = Modifier.height(2.dp))
 
                 Box(
                     modifier = Modifier
+                        .size(22.dp)
                         .clip(CircleShape)
-                        .background(if (isToday) colors.primary else colors.surfaceVariant)
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                        .background(
+                            if (isToday) colors.primary
+                            else if (isSelected) colors.primary.copy(alpha = 0.15f)
+                            else Color.Transparent
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = date.dayOfMonth.toString(),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isToday) colors.onPrimary else colors.onSurfaceVariant
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isToday) colors.onPrimary else if (isSelected) colors.primary else colors.onSurface
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(
+                color = colors.outlineVariant.copy(alpha = 0.6f),
+                thickness = 0.5.dp,
+                modifier = Modifier.padding(horizontal = 2.dp, vertical = 2.dp)
+            )
 
+            // Scrollable events list for this day
             if (events.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -176,32 +292,22 @@ fun LazyItemScope.WeekDayColumn(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = stringResource(R.string.no_lessons),
+                        text = "—",
                         style = MaterialTheme.typography.bodySmall,
-                        color = colors.onSurfaceVariant.copy(alpha = 0.6f)
+                        color = colors.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                 }
             } else {
-                // Scrollable so a busy day never clips its last lesson.
-                val visible = if (isFullScreen) events else events.take(MAX_SPLIT_BADGES)
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
+                        .padding(top = 2.dp)
                 ) {
-                    for (event in visible) {
-                        WeekLessonBadge(event = event, isFullScreen = isFullScreen)
-                    }
-                    if (events.size > visible.size) {
-                        Text(
-                            text = stringResource(R.string.more_events_format, events.size - visible.size),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = colors.primary,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(start = 4.dp)
-                        )
+                    for (event in events) {
+                        FullScreenWeekEventCard(event = event)
                     }
                 }
             }
@@ -209,60 +315,64 @@ fun LazyItemScope.WeekDayColumn(
     }
 }
 
-private const val MAX_SPLIT_BADGES = 3
-
+/**
+ * Micro event card designed to fit legibly inside a 7-column fullscreen weekly grid.
+ */
 @Composable
-fun WeekLessonBadge(
+private fun FullScreenWeekEventCard(
     event: CalendarEvent,
-    isFullScreen: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val typeColor = eventTypeColor(event.type)
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(4.dp)
+    val colors = MaterialTheme.colorScheme
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(typeColor.copy(alpha = 0.10f))
-            .border(1.dp, typeColor.copy(alpha = 0.25f), shape)
-            .padding(6.dp)
+            .background(typeColor.copy(alpha = 0.13f))
+            .border(0.5.dp, typeColor.copy(alpha = 0.35f), shape)
+            .padding(horizontal = 3.dp, vertical = 2.dp)
     ) {
+        // Start time
         Text(
-            text = formatTimeRange(event.startTime, event.endTime),
-            style = MaterialTheme.typography.labelSmall,
+            text = event.startTime.format(TIME_FORMATTER),
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.5.sp, lineHeight = 10.sp),
             fontWeight = FontWeight.Bold,
             color = typeColor,
             maxLines = 1
         )
 
+        // Event title
         Text(
             text = event.title,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp),
             fontWeight = FontWeight.SemiBold,
-            maxLines = if (isFullScreen) 3 else 2,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onSurface
+            color = colors.onSurface
         )
 
+        // Location (if present)
         if (event.location.isNotBlank()) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = Modifier.padding(top = 2.dp)
+                horizontalArrangement = Arrangement.spacedBy(1.dp),
+                modifier = Modifier.padding(top = 1.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.LocationOn,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(11.dp)
+                    tint = colors.onSurfaceVariant,
+                    modifier = Modifier.size(9.dp)
                 )
                 Text(
                     text = event.location,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, lineHeight = 9.sp),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = colors.onSurfaceVariant
                 )
             }
         }

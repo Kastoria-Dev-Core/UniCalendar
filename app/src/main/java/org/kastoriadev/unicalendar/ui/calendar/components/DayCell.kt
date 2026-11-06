@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 import org.kastoriadev.unicalendar.ui.common.eventTypeColor
 import java.time.LocalDate
@@ -127,68 +129,114 @@ private fun FullScreenDayCell(
     modifier: Modifier
 ) {
     val colors = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(6.dp)
     val textColor = when {
         isSelected -> colors.onPrimaryContainer
-        !isCurrentMonth -> colors.onSurface.copy(alpha = 0.35f)
-        isToday -> colors.primary
+        !isCurrentMonth -> colors.onSurface.copy(alpha = 0.32f)
+        isToday -> colors.onPrimary
         else -> colors.onSurface
     }
     val background = when {
-        isSelected -> colors.primaryContainer
+        isSelected -> colors.primaryContainer.copy(alpha = 0.5f)
         isCurrentMonth -> colors.surface
-        else -> Color.Transparent
+        else -> colors.surfaceContainerLowest.copy(alpha = 0.5f)
     }
     val border = when {
-        isToday -> Modifier.border(1.5.dp, colors.primary, shape)
+        isSelected -> Modifier.border(1.5.dp, colors.primary, shape)
+        isToday -> Modifier.border(1.dp, colors.primary.copy(alpha = 0.8f), shape)
         isCurrentMonth -> Modifier.border(1.dp, colors.outlineVariant, shape)
-        else -> Modifier
+        else -> Modifier.border(1.dp, colors.outlineVariant.copy(alpha = 0.4f), shape)
     }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .fillMaxSize()
-            .padding(1.5.dp)
+            .padding(1.dp)
             .clip(shape)
             .background(background)
             .then(border)
             .clickable(role = Role.Button) { onDateClick(date) }
             .padding(2.dp)
     ) {
-        Text(
-            text = date.dayOfMonth.toString(),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
-            color = textColor,
-            maxLines = 1
-        )
-
-        events.take(2).forEach { event ->
-            val pillColor = eventTypeColor(event.type)
-            val pillShape = RoundedCornerShape(4.dp)
-            Text(
-                text = event.title,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = pillColor,
+        // Date Number Header
+        if (isToday) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 1.dp)
-                    .clip(pillShape)
-                    .background(pillColor.copy(alpha = 0.12f))
-                    .border(1.dp, pillColor.copy(alpha = 0.25f), pillShape)
-                    .padding(horizontal = 4.dp, vertical = 1.dp)
-            )
-        }
-        if (events.size > 2) {
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(colors.primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = date.dayOfMonth.toString(),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onPrimary,
+                    maxLines = 1
+                )
+            }
+        } else {
             Text(
-                text = "+${events.size - 2}",
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.onSurfaceVariant,
+                text = date.dayOfMonth.toString(),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) colors.primary else textColor,
                 maxLines = 1
             )
+        }
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        // Days outside current month: show subtle dots to prevent text overflow & overlap on week 1
+        if (!isCurrentMonth) {
+            if (events.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    events.map { it.type }.distinct().take(3).forEach { type ->
+                        Box(
+                            modifier = Modifier
+                                .size(3.dp)
+                                .clip(CircleShape)
+                                .background(eventTypeColor(type).copy(alpha = 0.4f))
+                        )
+                    }
+                }
+            }
+        } else {
+            // Current month days: display up to 2 micro-chips with tight padding and clean truncation
+            val visibleEvents = events.take(2)
+            for (event in visibleEvents) {
+                val pillColor = eventTypeColor(event.type)
+                val pillShape = RoundedCornerShape(3.dp)
+                Text(
+                    text = event.title,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 10.sp),
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = pillColor,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 0.5.dp)
+                        .clip(pillShape)
+                        .background(pillColor.copy(alpha = 0.12f))
+                        .border(0.5.dp, pillColor.copy(alpha = 0.28f), pillShape)
+                        .padding(horizontal = 2.dp, vertical = 0.5.dp)
+                )
+            }
+            if (events.size > 2) {
+                Text(
+                    text = "+${events.size - 2}",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.5.sp),
+                    color = colors.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.padding(top = 0.5.dp)
+                )
+            }
         }
     }
 }

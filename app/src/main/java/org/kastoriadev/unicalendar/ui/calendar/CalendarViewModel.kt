@@ -52,6 +52,7 @@ class CalendarViewModel(
 
     private fun initialState(): CalendarUiState {
         val prefs = userPreferences
+        prefs?.hasCompletedOnboarding = true
         val lastSync = prefs?.lastSyncEpochMillis?.takeIf { it > 0 }?.let { millis ->
             LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault())
         }
@@ -64,8 +65,8 @@ class CalendarViewModel(
             appLanguage = prefs?.appLanguage ?: AppLanguage.GREEK,
             selectedSemester = prefs?.selectedSemester,
             includePde = prefs?.includePde ?: false,
-            showSemesterPrompt = prefs?.let { !it.hasCompletedOnboarding } ?: false,
-            canDismissSemesterPrompt = prefs?.hasCompletedOnboarding ?: true,
+            showSemesterPrompt = false,
+            canDismissSemesterPrompt = true,
             lastSyncedAt = lastSync,
             lastSyncLabel = prefs?.lastSyncLabel,
             errorReport = lastCrash?.let { ErrorReport(ErrorReport.Kind.CRASH, it) }
