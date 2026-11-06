@@ -23,6 +23,7 @@ import org.kastoriadev.unicalendar.domain.model.EventFeed
 import org.kastoriadev.unicalendar.domain.model.ThemeMode
 import org.kastoriadev.unicalendar.domain.repository.EventRepository
 import org.kastoriadev.unicalendar.ui.calendar.CalendarViewModel
+import org.kastoriadev.unicalendar.ui.calendar.MessageAction
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -235,6 +236,25 @@ class CalendarViewModelTest {
 
         assertEquals(LocalDate.now(), viewModel.uiState.value.selectedDate)
         assertFalse(viewModel.uiState.value.showDayDetailsSheet)
+    }
+
+    @Test
+    fun deleteEvent_canBeUndoneWithNotesIntact() = runTest {
+        val repo = FakeEventRepository()
+        val start = LocalDateTime.of(2026, 11, 3, 9, 0)
+        val lesson = CalendarEvent(id = 7, title = "Φυσική", notes = "Κεφάλαιο 2", startTime = start, endTime = start.plusHours(2))
+        repo.eventsFlow.value = listOf(lesson)
+        val viewModel = CalendarViewModel(repo, ScheduleSyncManager(repo))
+        advanceUntilIdle()
+
+        viewModel.deleteEvent(lesson)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.allEvents.isEmpty())
+        assertEquals(MessageAction.UNDO_DELETE, viewModel.uiState.value.userMessage?.action)
+
+        viewModel.onMessageAction(MessageAction.UNDO_DELETE)
+        advanceUntilIdle()
+        assertEquals(listOf(lesson), viewModel.uiState.value.allEvents)
     }
 
     @Test

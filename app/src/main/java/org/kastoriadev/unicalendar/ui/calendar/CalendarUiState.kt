@@ -31,12 +31,25 @@ data class CalendarUiState(
     val monthEvents: Map<LocalDate, List<CalendarEvent>> = emptyMap(),
     val selectedDateEvents: List<CalendarEvent> = emptyList(),
     val isSyncing: Boolean = false,
-    val syncMessage: UiText? = null,
+    val userMessage: UserMessage? = null,
     val lastSyncedAt: LocalDateTime? = null,
     val lastSyncLabel: String? = null,
     val showAddDialog: Boolean = false,
     val showSyncDialog: Boolean = false,
     val selectedEventForNotes: CalendarEvent? = null
 ) {
-    val showSettingsDialog: Boolean get() = showSettingsScreen
+    /** False until a timetable has been synced or an event added; drives the empty state. */
+    val hasAnyEvents: Boolean get() = allEvents.isNotEmpty()
+}
+
+/** A one-off snackbar message, optionally with an action button. */
+data class UserMessage(
+    val text: UiText,
+    val action: MessageAction? = null,
+    /** Distinguishes consecutive messages with the same text. */
+    val id: Long = System.nanoTime()
+)
+
+enum class MessageAction {
+    UNDO_DELETE
 }

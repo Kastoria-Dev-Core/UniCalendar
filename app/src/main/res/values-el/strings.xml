@@ -11,6 +11,7 @@
     <string name="action_add_event">Προσθήκη συμβάντος</string>
     <string name="action_sync">Συγχρονισμός προγράμματος</string>
     <string name="action_settings">Ρυθμίσεις</string>
+    <string name="action_undo">Αναίρεση</string>
 
     <!-- General Buttons & Actions -->
     <string name="btn_save">Αποθήκευση</string>
@@ -49,21 +50,20 @@
     <string name="dialog_clear_all_desc">Είστε βέβαιοι ότι θέλετε να διαγράψετε όλα τα προγράμματα και μαθήματα; Αυτή η ενέργεια επαναφέρει το ημερολόγιο σε εντελώς κενή κατάσταση και δεν μπορεί να αναιρεθεί.</string>
     <string name="btn_clear_confirm">Διαγραφή Όλων</string>
     <string name="msg_schedules_cleared">Όλα τα προγράμματα διαγράφηκαν επιτυχώς</string>
+    <string name="msg_event_deleted">Διαγράφηκε: «%1$s»</string>
 
     <!-- About & Attributions -->
     <string name="about_version">Έκδοση %1$s</string>
     <string name="about_built_by">Αναπτύχθηκε από τον Γεώργιο Γάσπαρη &amp; την KastoriaDevCore</string>
     <string name="about_org_desc">Η KastoriaDevCore είναι μια ανεξάρτητη φοιτητική κοινότητα ανάπτυξης ψηφιακών εργαλείων ανοιχτού κώδικα.</string>
-    <string name="about_disclaimer_title">Αποποίηση Ευθύνης</string>
     <string name="about_disclaimer_desc">Το UniCalendar είναι μια ανεξάρτητη φοιτητική εφαρμογή ανοιχτού κώδικα. Δεν αποτελεί επίσημη εφαρμογή και δεν συνδέεται, υποστηρίζεται ή εκπροσωπεί το Πανεπιστήμιο Δυτικής Μακεδονίας (ΠΔΜ) ή το Τμήμα Πληροφορικής.</string>
     <string name="about_libraries_title">Βιβλιοθήκες Ανοιχτού Κώδικα</string>
     <string name="about_libraries_desc">OkHttp (Apache 2.0), Jsoup (MIT)</string>
 
     <!-- Semester Filtering & Selection -->
     <string name="semester_all">Όλα τα Εξάμηνα</string>
-    <string name="semester_all_courses">Όλα τα Μαθήματα</string>
     <string name="semester_none">Χωρίς εξάμηνο (εμφανίζεται πάντα)</string>
-    <string name="semester_format">%1$so Εξάμηνο (Semester %1$s)</string>
+    <string name="semester_format">%1$sο Εξάμηνο</string>
     <string name="semester_pde">ΠΔΕ (Παιδαγωγική Επάρκεια)</string>
     <string name="filter_all_courses">Όλα τα Μαθήματα</string>
     <string name="filter_sem_format">Εξ. %1$s</string>
@@ -109,20 +109,28 @@
         <item quantity="one">%d συμβάν</item>
         <item quantity="other">%d συμβάντα</item>
     </plurals>
+    <plurals name="count_lessons">
+        <item quantity="one">%d μάθημα</item>
+        <item quantity="other">%d μαθήματα</item>
+    </plurals>
+    <plurals name="count_scheduled">
+        <item quantity="one">%d προγραμματισμένο συμβάν</item>
+        <item quantity="other">%d προγραμματισμένα συμβάντα</item>
+    </plurals>
 
     <!-- Calendar & Event List UI -->
     <string name="tap_lesson_for_notes">Πατήστε για σημειώσεις</string>
     <string name="no_events">Δεν υπάρχουν μαθήματα ή συμβάντα για αυτή την ημέρα</string>
     <string name="no_lessons">Κανένα μάθημα</string>
     <string name="more_events_format">+%1$d ακόμη</string>
-    <string name="scheduled_courses_count_format">%1$d προγραμματισμένα μαθήματα</string>
     <string name="notes_for_date">Σημειώσεις για %1$s</string>
-    <string name="lessons_count_single">1 μάθημα</string>
-    <string name="lessons_count_multiple">%1$d μαθήματα</string>
+    <string name="empty_no_timetable_title">Δεν υπάρχει πρόγραμμα ακόμη</string>
+    <string name="empty_no_timetable_desc">Κάντε συγχρονισμό για να εισαχθούν τα μαθήματα και οι εξετάσεις σας από το Τμήμα.</string>
+    <string name="btn_sync_now">Συγχρονισμός</string>
     <string name="field_description">Περιγραφή:</string>
     <string name="field_personal_notes">Προσωπικές Σημειώσεις:</string>
     <string name="notes_empty_tap">Δεν υπάρχουν σημειώσεις. Πατήστε για προσθήκη σημειώσεων ή εργασιών.</string>
-    <string name="notes_empty_placeholder_week">Πατήστε για προσθήκη σημειώσεων, εργασιών ή ύλης...</string>
+    <string name="notes_empty_placeholder_week">Πατήστε για προσθήκη σημειώσεων, εργασιών ή ύλης…</string>
     <string name="content_desc_synced">Συγχρονισμένο από το ωρολόγιο πρόγραμμα</string>
     <string name="content_desc_expand">Εμφάνιση λεπτομερειών</string>
     <string name="content_desc_collapse">Απόκρυψη λεπτομερειών</string>
@@ -146,7 +154,7 @@
     <string name="dialog_note_title">Σημειώσεις για %1$s</string>
     <string name="dialog_note_desc">Προσθέστε εργασίες, ύλη εξετάσεων, οδηγίες καθηγητή ή υπενθυμίσεις.</string>
     <string name="field_lesson_notes">Σημειώσεις Μαθήματος</string>
-    <string name="hint_lesson_notes">π.χ. Ασκήσεις Κεφαλαίου 4 για την επόμενη Δευτέρα...</string>
+    <string name="hint_lesson_notes">π.χ. Ασκήσεις Κεφαλαίου 4 για την επόμενη Δευτέρα…</string>
 
     <!-- Event Types -->
     <string name="event_type_lecture">Διάλεξη</string>

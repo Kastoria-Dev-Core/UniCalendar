@@ -1,12 +1,11 @@
 package org.kastoriadev.unicalendar.ui.calendar.components
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,14 +22,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import org.kastoriadev.unicalendar.R
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
+import org.kastoriadev.unicalendar.ui.common.EmptyDayState
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -39,15 +42,25 @@ import java.time.format.DateTimeFormatter
 fun DayDetailsSheet(
     selectedDate: LocalDate,
     events: List<CalendarEvent>,
+    hasAnyEvents: Boolean,
     onEditNoteClick: (CalendarEvent) -> Unit,
     onDeleteEvent: (CalendarEvent) -> Unit,
+    onSyncClick: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    val dateHeaderFormatter = remember(locale) {
-        DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", locale)
+    val dateHeader = remember(selectedDate, locale) {
+        selectedDate.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", locale))
+            .replaceFirstChar { it.titlecase(locale) }
+    }
+    val scope = rememberCoroutineScope()
+    // Animate the sheet away before removing it, instead of making it vanish.
+    val hideSheet: () -> Unit = {
+        scope.launch { sheetState.hide() }.invokeOnCompletion {
+            if (!sheetState.isVisible) onDismiss()
+        }
     }
 
     ModalBottomSheet(
@@ -58,28 +71,27 @@ fun DayDetailsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = selectedDate.format(dateHeaderFormatter),
+                        text = dateHeader,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = stringResource(R.string.scheduled_courses_count_format, events.size),
+                        text = pluralStringResource(R.plurals.count_scheduled, events.size, events.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                IconButton(onClick = onDismiss) {
+                IconButton(onClick = hideSheet) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = stringResource(R.string.btn_close)
@@ -93,24 +105,22 @@ fun DayDetailsSheet(
             )
 
             if (events.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 40.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.no_events),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                EmptyDayState(
+                    hasAnyEvents = hasAnyEvents,
+                    emptyDayText = stringResource(R.string.no_events),
+                    onSyncClick = {
+                        hideSheet()
+                        onSyncClick()
+                    },
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(380.dp)
+                        .heightIn(max = 560.dp)
                 ) {
                     items(events, key = { it.id }) { event ->
                         ExpandableEventCard(
@@ -121,8 +131,6 @@ fun DayDetailsSheet(
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

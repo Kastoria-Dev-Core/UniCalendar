@@ -11,6 +11,7 @@
     <string name="action_add_event">Add event</string>
     <string name="action_sync">Sync schedule</string>
     <string name="action_settings">Settings</string>
+    <string name="action_undo">Undo</string>
 
     <!-- General Buttons & Actions -->
     <string name="btn_save">Save</string>
@@ -49,22 +50,21 @@
     <string name="dialog_clear_all_desc">Are you sure you want to delete all schedules and courses? This will revert the calendar to a completely blank state and cannot be undone.</string>
     <string name="btn_clear_confirm">Clear Everything</string>
     <string name="msg_schedules_cleared">All schedules have been cleared</string>
+    <string name="msg_event_deleted">Deleted “%1$s”</string>
 
     <!-- About & Attributions -->
     <string name="about_version">Version %1$s</string>
     <string name="about_built_by">Developed by Georgios Gasparis &amp; KastoriaDevCore</string>
     <string name="about_org_desc">KastoriaDevCore is an independent student developer organization building digital open-source tools.</string>
-    <string name="about_disclaimer_title">Disclaimer</string>
     <string name="about_disclaimer_desc">UniCalendar is an independent open-source student project. It is not an official application and is not affiliated with, endorsed by, or sponsored by the University of Western Macedonia (UOWM) or the Department of Informatics.</string>
     <string name="about_libraries_title">Open-Source Libraries</string>
     <string name="about_libraries_desc">OkHttp (Apache 2.0), Jsoup (MIT)</string>
 
     <!-- Semester Filtering & Selection -->
     <string name="semester_all">All Semesters</string>
-    <string name="semester_all_courses">All Courses</string>
     <string name="semester_none">No semester (always visible)</string>
-    <string name="semester_format">%1$so Εξάμηνο (Semester %1$s)</string>
-    <string name="semester_pde">ΠΔΕ (Παιδαγωγική Επάρκεια)</string>
+    <string name="semester_format">Semester %1$s</string>
+    <string name="semester_pde">Pedagogical Competence (ΠΔΕ)</string>
     <string name="filter_all_courses">All Courses</string>
     <string name="filter_sem_format">Sem %1$s</string>
     <string name="filter_pde">ΠΔΕ</string>
@@ -109,20 +109,28 @@
         <item quantity="one">%d event</item>
         <item quantity="other">%d events</item>
     </plurals>
+    <plurals name="count_lessons">
+        <item quantity="one">%d lesson</item>
+        <item quantity="other">%d lessons</item>
+    </plurals>
+    <plurals name="count_scheduled">
+        <item quantity="one">%d scheduled event</item>
+        <item quantity="other">%d scheduled events</item>
+    </plurals>
 
     <!-- Calendar & Event List UI -->
     <string name="tap_lesson_for_notes">Tap lesson for notes</string>
     <string name="no_events">No events scheduled for this day</string>
     <string name="no_lessons">No lessons</string>
     <string name="more_events_format">+%1$d more</string>
-    <string name="scheduled_courses_count_format">%1$d scheduled courses &amp; lessons</string>
     <string name="notes_for_date">Notes for %1$s</string>
-    <string name="lessons_count_single">1 lesson</string>
-    <string name="lessons_count_multiple">%1$d lessons</string>
+    <string name="empty_no_timetable_title">No timetable yet</string>
+    <string name="empty_no_timetable_desc">Sync to import your courses and exams from the department.</string>
+    <string name="btn_sync_now">Sync now</string>
     <string name="field_description">Description:</string>
     <string name="field_personal_notes">Personal Notes:</string>
     <string name="notes_empty_tap">No notes added yet. Tap to add notes or assignments.</string>
-    <string name="notes_empty_placeholder_week">Tap to add personal notes, tasks, or exam topics...</string>
+    <string name="notes_empty_placeholder_week">Tap to add personal notes, tasks, or exam topics…</string>
     <string name="content_desc_synced">Synced from university schedule</string>
     <string name="content_desc_expand">Expand details</string>
     <string name="content_desc_collapse">Collapse details</string>
@@ -146,7 +154,7 @@
     <string name="dialog_note_title">Notes for %1$s</string>
     <string name="dialog_note_desc">Add homework, exam topics, professor instructions, or study reminders.</string>
     <string name="field_lesson_notes">Lesson Notes</string>
-    <string name="hint_lesson_notes">e.g. Chapter 4 exercises due next Monday...</string>
+    <string name="hint_lesson_notes">e.g. Chapter 4 exercises due next Monday…</string>
 
     <!-- Event Types -->
     <string name="event_type_lecture">Lecture</string>
