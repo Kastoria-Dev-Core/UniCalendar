@@ -49,10 +49,14 @@ fun SemesterSelectPromptDialog(
     onSemesterConfirmed: (semester: String, includePde: Boolean) -> Unit
 ) {
     var selectedSemester by rememberSaveable {
-        mutableStateOf(currentSemester?.takeIf { it.isNotBlank() && it != SEMESTER_ALL } ?: "1")
+        mutableStateOf(currentSemester?.takeIf { it in CourseSemesterKeys } ?: "1")
     }
-    var includePde by rememberSaveable { mutableStateOf(currentIncludePde) }
-    val semesters = semesterChoices()
+    // ΠΔΕ is taken alongside a semester, so it is the checkbox below the list rather than an
+    // entry in it. A ΠΔΕ-only choice from an earlier version carries over as a ticked checkbox.
+    var includePde by rememberSaveable {
+        mutableStateOf(currentIncludePde || currentSemester.equals(CalendarEvent.SEMESTER_PDE, ignoreCase = true))
+    }
+    val semesters = CourseSemesterKeys.map { key -> key to semesterLabel(key) }
 
     AlertDialog(
         onDismissRequest = {
@@ -120,33 +124,26 @@ fun SemesterSelectPromptDialog(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Choosing the ΠΔΕ calendar itself already includes its courses.
-                val pdeImplied = selectedSemester == CalendarEvent.SEMESTER_PDE
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .toggleable(
-                            value = includePde || pdeImplied,
-                            enabled = !pdeImplied,
+                            value = includePde,
                             role = Role.Checkbox,
                             onValueChange = { includePde = it }
                         )
                         .padding(vertical = 4.dp, horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Checkbox(
-                        checked = includePde || pdeImplied,
-                        enabled = !pdeImplied,
-                        onCheckedChange = null
-                    )
+                    Checkbox(checked = includePde, onCheckedChange = null)
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
                             text = stringResource(R.string.settings_include_pde),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (pdeImplied) 0.5f else 1f)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = stringResource(R.string.dialog_select_semester_pde_desc),

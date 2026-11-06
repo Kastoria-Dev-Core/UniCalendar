@@ -18,8 +18,11 @@ import androidx.compose.ui.unit.dp
 import org.kastoriadev.unicalendar.R
 import org.kastoriadev.unicalendar.domain.model.CalendarEvent
 
-/** Semester keys used across the app, in display order. */
-internal val SemesterKeys = listOf("1", "2", "3", "4", "5", "6", "7", "8", CalendarEvent.SEMESTER_PDE)
+/** The eight course semesters, in display order. */
+internal val CourseSemesterKeys = listOf("1", "2", "3", "4", "5", "6", "7", "8")
+
+/** Semester keys used across the app, in display order: the semesters, then ΠΔΕ. */
+internal val SemesterKeys = CourseSemesterKeys + CalendarEvent.SEMESTER_PDE
 
 internal const val SEMESTER_ALL = "ALL"
 
